@@ -70,3 +70,12 @@ install(DIRECTORY script
 # catkin_install_python(PROGRAMS script/beetle/kondo_control.py
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 #   )
+catkin_install_python(PROGRAMS
+  script/demos/valve_rotation_smach_test.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+catkin_install_python(PROGRAMS
+  script/demos/valve_rotation_test.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+

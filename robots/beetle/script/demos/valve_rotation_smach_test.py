@@ -12,6 +12,7 @@ from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 from beetle.assembly_api import AssembleDemo
 from beetle.disassembly_api import DisassembleDemo
+from task.assembly_motion import *
 
 class PolynomialTrajectory:
     def __init__(self, duration):
@@ -129,8 +130,8 @@ def execute_poly_motion_nav(pub, start, target, avg_speed, rate_hz=20, delay_aft
 class SeparatedMoveToGateState(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
-        self.beetle_1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
-        self.beetle_2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
+        self.beetle1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
+        self.beetle2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
         self.maze_entrance_x = 1.0
         self.avg_speed = 0.1
 
@@ -139,8 +140,8 @@ class SeparatedMoveToGateState(smach.State):
         self.current_pose_beetle1 = None
         self.current_pose_beetle2 = None
 
-        self.pos_beetle_1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
-        self.pos_beetle_2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
+        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
+        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
 
     def beetle1_callback(self, msg):
         self.current_pose_beetle1 = msg
@@ -175,8 +176,8 @@ class SeparatedMoveToGateState(smach.State):
         rospy.loginfo("SeparatedMoveToGateState: Moving UAVs to target positions: UAV1: %s, UAV2: %s" %
                       (target_beetle1, target_beetle2))
 
-        t1 = execute_poly_motion_pose_async(self.beetle_1_pub, start_beetle1, target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle_2_pub, start_beetle2, target_beetle2, self.avg_speed)
+        t1 = execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_beetle1, self.avg_speed)
+        t2 = execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -189,16 +190,16 @@ class SeparatedMoveToValveState(smach.State):
         self.module_ids = [1, 2]
         self.maze_length = 1.0  
         self.is_simulation = rospy.get_param("~simulation", True)
-        self.beetle_1_received = threading.Event()
-        self.beetle_2_received = threading.Event()
+        self.beetle1_received = threading.Event()
+        self.beetle2_received = threading.Event()
         self.valve_received = threading.Event()
-        self.beetle_1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
-        self.beetle_2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
-        self.pos_beetle_1 = None
-        self.pos_beetle_2 = None
-        self.pos_beetle_1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle_1_callback, queue_size=1)
-        self.pos_beetle_2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle_2_callback, queue_size=1)
-        self.x_offset = 0.7 
+        self.beetle1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
+        self.beetle2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
+        self.pos_beetle1 = None
+        self.pos_beetle2 = None
+        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
+        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
+        self.x_offset = 0.6
         self.y_offset = 0.25 
         if self.is_simulation:
             self.pose_valve_sim = None
@@ -208,13 +209,13 @@ class SeparatedMoveToValveState(smach.State):
             self.valve_sub = rospy.Subscriber("/valve/mocap/pose", PoseStamped, self.valve_callback, queue_size=1)
         self.avg_speed = 0.08
 
-    def beetle_1_callback(self, msg):
-        self.pos_beetle_1 = msg
-        self.beetle_1_received.set()
+    def beetle1_callback(self, msg):
+        self.pos_beetle1 = msg
+        self.beetle1_received.set()
 
-    def beetle_2_callback(self, msg):
-        self.pos_beetle_2 = msg
-        self.beetle_2_received.set()
+    def beetle2_callback(self, msg):
+        self.pos_beetle2 = msg
+        self.beetle2_received.set()
 
     def valve_sim_callback(self, msg):
         self.pose_valve_sim = msg
@@ -226,25 +227,25 @@ class SeparatedMoveToValveState(smach.State):
 
     def execute(self, userdata):
         rospy.loginfo("SeparatedMoveToValveState: Waiting for UAV and valve positions...")
-        if not self.beetle_1_received.wait(5) or not self.beetle_2_received.wait(5):
+        if not self.beetle1_received.wait(5) or not self.beetle2_received.wait(5):
             rospy.logwarn("SeparatedMoveToValveState: Timeout waiting for UAV positions.")
             return 'failed'
         if not self.valve_received.wait(5):
             rospy.logwarn("SeparatedMoveToValveState: Timeout waiting for valve position.")
             return 'failed'
 
-        start_beetle_1 = [
-            self.pos_beetle_1.pose.position.x,
-            self.pos_beetle_1.pose.position.y,
-            self.pos_beetle_1.pose.position.z
+        start_beetle1 = [
+            self.pos_beetle1.pose.position.x,
+            self.pos_beetle1.pose.position.y,
+            self.pos_beetle1.pose.position.z
         ]
-        start_beetle_2 = [
-            self.pos_beetle_2.pose.position.x,
-            self.pos_beetle_2.pose.position.y,
-            self.pos_beetle_2.pose.position.z
+        start_beetle2 = [
+            self.pos_beetle2.pose.position.x,
+            self.pos_beetle2.pose.position.y,
+            self.pos_beetle2.pose.position.z
         ]
         rospy.loginfo("SeparatedMoveToValveState: Current UAV positions:\n  Beetle1: %s\n  Beetle2: %s",
-                    start_beetle_1, start_beetle_2)
+                    start_beetle1, start_beetle2)
 
         if self.is_simulation:
             valve_x = self.pose_valve_sim.pose.pose.position.x
@@ -259,12 +260,12 @@ class SeparatedMoveToValveState(smach.State):
 
         safe_altitude = valve_z + offset
 
-        target_ascend_beetle1 = [start_beetle_1[0], start_beetle_1[1], safe_altitude]
-        target_ascend_beetle2 = [start_beetle_2[0], start_beetle_2[1], safe_altitude]
+        target_ascend_beetle1 = [start_beetle1[0], start_beetle1[1], safe_altitude]
+        target_ascend_beetle2 = [start_beetle2[0], start_beetle2[1], safe_altitude]
         rospy.loginfo("SeparatedMoveToValveState: Ascending to safe altitude:\n  Beetle1: %s\n  Beetle2: %s",
                     target_ascend_beetle1, target_ascend_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle_1_pub, start_beetle_1, target_ascend_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle_2_pub, start_beetle_2, target_ascend_beetle2, self.avg_speed)
+        t1 = execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_ascend_beetle1, self.avg_speed)
+        t2 = execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_ascend_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -277,8 +278,8 @@ class SeparatedMoveToValveState(smach.State):
         horiz_target_beetle2 = [valve_x + self.x_offset, valve_y - self.y_offset, safe_altitude + safe_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving horizontally to above valve (with offset):\n  Beetle1: %s\n  Beetle2: %s",
                     horiz_target_beetle1, horiz_target_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle_1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle_2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
+        t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
+        t2 = execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -290,8 +291,8 @@ class SeparatedMoveToValveState(smach.State):
         final_target_beetle2 = [valve_x + self.x_offset, valve_y, safe_altitude + safe_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving to final position above valve:\n  Beetle1: %s\n  Beetle2: %s",
                     final_target_beetle1, final_target_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle_1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle_2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
+        t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
+        t2 = execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -303,37 +304,45 @@ class SeparatedMoveToValveState(smach.State):
 class AssembleState(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
-        self.assemble_demo = AssembleDemo()
-        
+        modules_str = rospy.get_param("~module_ids", "")
+        real_machine = rospy.get_param("~real_machine", True)
+        modules = []
+        if modules_str:
+            modules = [int(x) for x in modules_str.split(',')]
+        else:
+            rospy.logerr("No module ID is designated!")
+        self.assemble_demo = AssemblyDemo(module_ids=modules, real_machine=real_machine)
+    
     def execute(self, userdata):
         rospy.loginfo("Assembling UAVs...")
         try:
             self.assemble_demo.main()
             rospy.loginfo("Assembly completed successfully.")
-            return 'succeeded'  
+            return 'succeeded'
         except rospy.ROSInterruptException:
             rospy.logerr("Assembly process failed.")
             return 'failed'
+
 
 
 class MoveAndRotateValveState(smach.State):
     def __init__(self):
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
         self.module_ids = [1, 2]
-        self.pos_beetle_2 = PoseStamped()
-        self.pos_beetle_1 = PoseStamped()
+        self.pos_beetle2 = PoseStamped()
+        self.pos_beetle1 = PoseStamped()
         self.pos_valve = PoseStamped()
         self.pos_valve_sim = Odometry()
         self.is_simulation = rospy.get_param("~simulation", True)
-        self.beetle_1_received = threading.Event()
-        self.beetle_2_received = threading.Event()
+        self.beetle1_received = threading.Event()
+        self.beetle2_received = threading.Event()
         self.valve_received = threading.Event()
         self.pos_pub = rospy.Publisher("/assembly/uav/nav", FlightNav, queue_size=1)
         from std_msgs.msg import Empty
         self.test_pub = rospy.Publisher("/assembly/uav/test", Empty, queue_size=1)
 
-        self.pos_beetle_2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle_2_callback, queue_size=1)
-        self.pos_beetle_1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle_1_callback, queue_size=1)
+        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
+        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
         if self.is_simulation:
             self.pos_valve_sim_sub = rospy.Subscriber("/valve/odom", Odometry, self.valve_sim_callback, queue_size=1)
         else:
@@ -350,13 +359,13 @@ class MoveAndRotateValveState(smach.State):
         self.avg_valve_rotation_speed = 0.3
         self.exit_target = [4.0, 0.0, 1.0]
         
-    def beetle_2_callback(self, msg):
-        self.pos_beetle_2 = msg
-        self.beetle_2_received.set()
+    def beetle2_callback(self, msg):
+        self.pos_beetle2 = msg
+        self.beetle2_received.set()
 
-    def beetle_1_callback(self, msg):
-        self.pos_beetle_1 = msg
-        self.beetle_1_received.set()
+    def beetle1_callback(self, msg):
+        self.pos_beetle1 = msg
+        self.beetle1_received.set()
     
     def valve_callback(self, msg):
         self.pos_valve = msg
@@ -374,7 +383,7 @@ class MoveAndRotateValveState(smach.State):
         test_data = Empty()
         self.test_pub.publish(test_data)
         rospy.logwarn("Waiting for position messages...")
-        events = [self.beetle_1_received, self.beetle_2_received, self.valve_received]
+        events = [self.beetle1_received, self.beetle2_received, self.valve_received]
         all_received = all(event.wait(timeout) for event in events)
         if all_received:
             rospy.loginfo("All positions received, initializing...")
@@ -386,14 +395,14 @@ class MoveAndRotateValveState(smach.State):
 
     def update_current_pos(self):
         self.current_pos = PoseStamped()
-        self.current_pos.pose.position.x = (self.pos_beetle_2.pose.position.x + self.pos_beetle_1.pose.position.x) / len(self.module_ids)
-        self.current_pos.pose.position.y = (self.pos_beetle_2.pose.position.y + self.pos_beetle_1.pose.position.y) / len(self.module_ids)
-        self.current_pos.pose.position.z = (self.pos_beetle_2.pose.position.z + self.pos_beetle_1.pose.position.z) / len(self.module_ids)
+        self.current_pos.pose.position.x = (self.pos_beetle2.pose.position.x + self.pos_beetle1.pose.position.x) / len(self.module_ids)
+        self.current_pos.pose.position.y = (self.pos_beetle2.pose.position.y + self.pos_beetle1.pose.position.y) / len(self.module_ids)
+        self.current_pos.pose.position.z = (self.pos_beetle2.pose.position.z + self.pos_beetle1.pose.position.z) / len(self.module_ids)
 
     def pos_initialize(self):
-        self.start_x = (self.pos_beetle_2.pose.position.x + self.pos_beetle_1.pose.position.x) / len(self.module_ids)
-        self.start_y = (self.pos_beetle_2.pose.position.y + self.pos_beetle_1.pose.position.y) / len(self.module_ids)
-        self.start_z = (self.pos_beetle_2.pose.position.z + self.pos_beetle_1.pose.position.z) / len(self.module_ids)
+        self.start_x = (self.pos_beetle2.pose.position.x + self.pos_beetle1.pose.position.x) / len(self.module_ids)
+        self.start_y = (self.pos_beetle2.pose.position.y + self.pos_beetle1.pose.position.y) / len(self.module_ids)
+        self.start_z = (self.pos_beetle2.pose.position.z + self.pos_beetle1.pose.position.z) / len(self.module_ids)
         if self.is_simulation:
             self.valve_x = self.pos_valve_sim.pose.pose.position.x
             self.valve_y = self.pos_valve_sim.pose.pose.position.y
@@ -408,8 +417,8 @@ class MoveAndRotateValveState(smach.State):
         self.pos_initialization = True
     
     def get_uav_yaw(self):
-        orientation_q1 = self.pos_beetle_1.pose.orientation
-        orientation_q2 = self.pos_beetle_2.pose.orientation
+        orientation_q1 = self.pos_beetle1.pose.orientation
+        orientation_q2 = self.pos_beetle2.pose.orientation
         quaternion1 = (orientation_q1.x, orientation_q1.y, orientation_q1.z, orientation_q1.w)
         quaternion2 = (orientation_q2.x, orientation_q2.y, orientation_q2.z, orientation_q2.w)
         _, _, yaw1 = euler_from_quaternion(quaternion1)
@@ -550,16 +559,20 @@ class MoveAndRotateValveState(smach.State):
                                      fixed_x=self.start_x, fixed_y=self.start_y, fixed_z=self.start_z)
         rospy.loginfo("Moving horizontally to the valve position...")
         self.move_to_target_poly(self.valve_x, self.valve_y, self.current_pos.pose.position.z, avg_speed=self.avg_speed)
+        time.sleep(1)
         rospy.loginfo("Descending to the valve operation height...")
         target_z = self.valve_z + (self.z_offset_sim if self.is_simulation else self.z_offset_real)
         self.move_to_target_poly(self.valve_x, self.valve_y, target_z, avg_speed=self.avg_speed)
+        time.sleep(2)
         rospy.loginfo("Arrived at the valve position. Starting valve rotation...")
         self.rotate_to_target_poly(self.valve_rotation_angle + self.yaw_offset, avg_yaw_speed=self.avg_valve_rotation_speed,
                                      fixed_x=self.valve_x, fixed_y=self.valve_y, fixed_z=target_z)
+        time.sleep(2)
         rospy.loginfo("Valve rotation completed. Hovering at start altitude...")
         self.move_to_target_poly(self.valve_x, self.valve_y, self.start_z, avg_speed=self.avg_speed)
         self.rotate_to_target_poly(0.0, avg_yaw_speed=self.avg_yaw_speed,
                                    fixed_x=self.valve_x, fixed_y=self.valve_y, fixed_z=self.start_z)
+        time.sleep(1)
         rospy.loginfo("Returning to start position...")
         self.move_to_target_poly(self.exit_target[0], self.exit_target[1], self.exit_target[2], avg_speed=self.avg_speed)
         if self.pos_check():

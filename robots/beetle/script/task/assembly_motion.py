@@ -46,8 +46,13 @@ class AssemblyDemo():
         sis = smach_ros.IntrospectionServer('smach_server', sm_top, '/SM_ROOT')
         sis.start()
         outcome = sm_top.execute()
-        rospy.spin()
-        sis.stop()
+        # rospy.spin()
+        # sis.stop()
+        # 保持ROS节点运行
+        while not rospy.is_shutdown() and outcome not in ['succeeded', 'interupted']:
+            rospy.sleep(0.1)  
+            sis.stop()
+            return outcome  
 if __name__ == '__main__':
     rospy.init_node("assembly_motion")
     modules_str = rospy.get_param("module_ids", default="")
