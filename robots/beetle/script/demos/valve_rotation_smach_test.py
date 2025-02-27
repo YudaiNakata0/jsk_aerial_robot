@@ -65,7 +65,7 @@ class PolynomialTrajectory:
                 np.dot(self.coeffs_z, T)
             )
 
-def execute_poly_motion_pose_async(pub, start, target, avg_speed, rate_hz=20, delay_after=0):
+def poly_motion(pub, start, target, avg_speed, rate_hz=20, delay_after=0):
 
     def motion():
         distance = math.sqrt((target[0]-start[0])**2 +
@@ -205,12 +205,12 @@ class SeparatedMoveToGateState(smach.State):
         rospy.loginfo("SeparatedMoveToGateState: Moving UAVs to target positions: UAV1: %s, UAV2: %s" %
                       (target_beetle1, target_beetle2))
 
-        t1 = execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_beetle2, self.avg_speed)
+        t1 = poly_motion(self.beetle1_pub, start_beetle1, target_beetle1, self.avg_speed)
+        t2 = poly_motion(self.beetle2_pub, start_beetle2, target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
-        rospy.loginfo("SeparatedMoveToGateState: Reached maze entrance vicinity.")
+        rospy.loginfo("SeparatedMoveToGateState: Reached maze entrance.")
         return 'succeeded'
 
 class SeparatedMoveToValveState(smach.State):
@@ -319,8 +319,8 @@ class SeparatedMoveToValveState(smach.State):
         target_ascend_beetle2 = [start_beetle2[0], start_beetle2[1], safe_altitude]
         rospy.loginfo("SeparatedMoveToValveState: Ascending to safe altitude:\n  Beetle1: %s\n  Beetle2: %s",
                     target_ascend_beetle1, target_ascend_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_ascend_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_ascend_beetle2, self.avg_speed)
+        t1 = poly_motion(self.beetle1_pub, start_beetle1, target_ascend_beetle1, self.avg_speed)
+        t2 = poly_motion(self.beetle2_pub, start_beetle2, target_ascend_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -332,8 +332,8 @@ class SeparatedMoveToValveState(smach.State):
         horiz_target_beetle2 = [valve_x + self.x_offset, valve_y - self.y_offset, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving horizontally to above valve (with offset):\n  Beetle1: %s\n  Beetle2: %s",
                     horiz_target_beetle1, horiz_target_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
+        t1 = poly_motion(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
+        t2 = poly_motion(self.beetle2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -345,8 +345,8 @@ class SeparatedMoveToValveState(smach.State):
         final_target_beetle2 = [valve_x + self.x_offset, valve_y, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving to final position above valve:\n  Beetle1: %s\n  Beetle2: %s",
                     final_target_beetle1, final_target_beetle2)
-        t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
-        t2 = execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
+        t1 = poly_motion(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
+        t2 = poly_motion(self.beetle2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -381,8 +381,6 @@ class AssembleState(smach.State):
         except rospy.ROSInterruptException:
             rospy.logerr("Assembly process failed.")
             return 'failed'
-
-
 
 class MoveAndRotateValveState(smach.State):
     def __init__(self,
@@ -627,6 +625,45 @@ class MoveAndRotateValveState(smach.State):
             rate.sleep()
         rospy.loginfo("Rotation complete, reached target yaw.")
         time.sleep(2)
+         # 增加闭环位置修正，确保无人机位置回到指定的固定位置
+        tolerance = 0.01  
+        k_p = 0.2        
+        max_correction_duration = 10 
+        start_correction_time = rospy.Time.now().to_sec()
+        
+        while not rospy.is_shutdown():
+            self.update_current_pos()
+            current_x = self.current_pos.pose.position.x
+            current_y = self.current_pos.pose.position.y
+            current_z = self.current_pos.pose.position.z
+            error_x = fixed_x - current_x
+            error_y = fixed_y - current_y
+            error_z = fixed_z - current_z
+            error_norm = math.sqrt(error_x**2 + error_y**2 + error_z**2)
+            rospy.loginfo(f"Position correction: error norm = {error_norm:.3f}")
+            if error_norm < tolerance:
+                rospy.loginfo("Position correction complete. Error within tolerance.")
+                break
+            correction_x = k_p * error_x
+            correction_y = k_p * error_y
+            correction_z = k_p * error_z
+            pos_cmd = FlightNav()
+            pos_cmd.target = 1
+            pos_cmd.pos_xy_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_pos_x = current_x + correction_x
+            pos_cmd.target_pos_y = current_y + correction_y
+            pos_cmd.pos_z_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_pos_z = current_z + correction_z
+            pos_cmd.yaw_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_yaw = target_yaw  # 保持目标偏航角
+            self.pos_pub.publish(pos_cmd)
+            rate.sleep()
+            if rospy.Time.now().to_sec() - start_correction_time > max_correction_duration:
+                rospy.logwarn("Position correction exceeded maximum duration.")
+                break
+        rospy.loginfo("Rotation and position correction complete.")
+        time.sleep(2)
+
 
     def execute(self, userdata):
         if not self.pos_initialization:

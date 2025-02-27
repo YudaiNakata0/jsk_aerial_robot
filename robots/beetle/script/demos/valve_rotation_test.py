@@ -400,6 +400,44 @@ class MoveAndRotateValveState(smach.State):
             rate.sleep()
         rospy.loginfo("Rotation complete, reached target yaw.")
         time.sleep(2)
+         # 增加闭环位置修正，确保无人机位置回到指定的固定位置
+        tolerance = 0.01  
+        k_p = 0.2        
+        max_correction_duration = 5 
+        start_correction_time = rospy.Time.now().to_sec()
+        
+        while not rospy.is_shutdown():
+            self.update_current_pos()
+            current_x = self.current_pos.pose.position.x
+            current_y = self.current_pos.pose.position.y
+            current_z = self.current_pos.pose.position.z
+            error_x = fixed_x - current_x
+            error_y = fixed_y - current_y
+            error_z = fixed_z - current_z
+            error_norm = math.sqrt(error_x**2 + error_y**2 + error_z**2)
+            rospy.loginfo(f"Position correction: error norm = {error_norm:.3f}")
+            if error_norm < tolerance:
+                rospy.loginfo("Position correction complete. Error within tolerance.")
+                break
+            correction_x = k_p * error_x
+            correction_y = k_p * error_y
+            correction_z = k_p * error_z
+            pos_cmd = FlightNav()
+            pos_cmd.target = 1
+            pos_cmd.pos_xy_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_pos_x = current_x + correction_x
+            pos_cmd.target_pos_y = current_y + correction_y
+            pos_cmd.pos_z_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_pos_z = current_z + correction_z
+            pos_cmd.yaw_nav_mode = FlightNav.POS_MODE
+            pos_cmd.target_yaw = target_yaw  # 保持目标偏航角
+            self.pos_pub.publish(pos_cmd)
+            rate.sleep()
+            if rospy.Time.now().to_sec() - start_correction_time > max_correction_duration:
+                rospy.logwarn("Position correction exceeded maximum duration.")
+                break
+        rospy.loginfo("Rotation and position correction complete.")
+        time.sleep(1)
 
     def execute(self, userdata):
         if not self.pos_initialization:
