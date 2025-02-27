@@ -128,20 +128,47 @@ def execute_poly_motion_nav(pub, start, target, avg_speed, rate_hz=20, delay_aft
         time.sleep(delay_after)
 
 class SeparatedMoveToGateState(smach.State):
-    def __init__(self):
+    def __init__(self,
+                 maze_entrance_x = 1.0,
+                 maze_entrance_y = 0.0,
+                 maze_entrance_z = 1.0,
+                 maze_offset_x = 0.2,
+                 maze_offset_y = 0.5,
+                 avg_speed = 0.1):
+        
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
-        self.beetle1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
-        self.beetle2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
-        self.maze_entrance_x = 1.0
-        self.avg_speed = 0.1
 
+        self.maze_entrance_x = maze_entrance_x
+        self.maze_entrance_y = maze_entrance_y
+        self.maze_entrance_z = maze_entrance_z
+        self.maze_offset_x = maze_offset_x
+        self.maze_offset_y = maze_offset_y
+        self.avg_speed = avg_speed
+
+        # Module IDs
+        module_ids_str = rospy.get_param("~module_ids", "1,2")
+        rospy.loginfo("SeparatedMoveToGateState: Module IDs: %s" % module_ids_str)
+        self.module_ids = [int(x) for x in module_ids_str.split(',')]
+        if len(self.module_ids) < 2:
+            rospy.logerr("SeparatedMoveToGateState: At least 2 module IDs are required.")
+
+        # Publishers 
+        self.beetle1_pub_topic = "/beetle{}/target_pose".format(self.module_ids[0])
+        self.beetle2_pub_topic = "/beetle{}/target_pose".format(self.module_ids[1])
+        self.beetle1_pub = rospy.Publisher(self.beetle1_pub_topic, PoseStamped, queue_size=1)
+        self.beetle2_pub = rospy.Publisher(self.beetle2_pub_topic, PoseStamped, queue_size=1)
+
+        # Subscribers
+        self.beetle1_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[0])
+        self.beetle2_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[1])
+        rospy.Subscriber(self.beetle1_sub_topic, PoseStamped, self.beetle1_callback, queue_size=1)
+        rospy.Subscriber(self.beetle2_sub_topic, PoseStamped, self.beetle2_callback, queue_size=1)
+
+        # Event flags
         self.beetle1_received = threading.Event()
         self.beetle2_received = threading.Event()
         self.current_pose_beetle1 = None
         self.current_pose_beetle2 = None
-
-        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
-        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
 
     def beetle1_callback(self, msg):
         self.current_pose_beetle1 = msg
@@ -170,9 +197,11 @@ class SeparatedMoveToGateState(smach.State):
         rospy.loginfo("SeparatedMoveToGateState: Current UAV positions received: UAV1: %s, UAV2: %s" %
                       (start_beetle1, start_beetle2))
 
-        target_x = self.maze_entrance_x - 0.2
-        target_beetle1 = [target_x, 0.5, 1.0]
-        target_beetle2 = [target_x, -0.5, 1.0]
+        target_x = self.maze_entrance_x - self.maze_offset_x
+        target_y = self.maze_entrance_y 
+        target_z = self.maze_entrance_z
+        target_beetle1 = [target_x, target_y + self.maze_offset_y, target_z]
+        target_beetle2 = [target_x, target_y - self.maze_offset_y, target_z]
         rospy.loginfo("SeparatedMoveToGateState: Moving UAVs to target positions: UAV1: %s, UAV2: %s" %
                       (target_beetle1, target_beetle2))
 
@@ -185,29 +214,55 @@ class SeparatedMoveToGateState(smach.State):
         return 'succeeded'
 
 class SeparatedMoveToValveState(smach.State):
-    def __init__(self):
+    def __init__(self,
+                 maze_length = 1.0,
+                 x_offset = 0.6,
+                 y_offset = 0.25,
+                 avg_speed = 0.08,
+                 safety_margin = 0.3):
+
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
-        self.module_ids = [1, 2]
-        self.maze_length = 1.0  
-        self.is_simulation = rospy.get_param("~simulation", True)
+
+        self.maze_length = maze_length
+        self.x_offset = x_offset
+        self.y_offset = y_offset 
+        self.avg_speed = avg_speed 
+        self.safety_margin = safety_margin 
+
         self.beetle1_received = threading.Event()
         self.beetle2_received = threading.Event()
         self.valve_received = threading.Event()
-        self.beetle1_pub = rospy.Publisher("/beetle1/target_pose", PoseStamped, queue_size=1)
-        self.beetle2_pub = rospy.Publisher("/beetle2/target_pose", PoseStamped, queue_size=1)
+
+        # Module IDs
+        self.is_simulation = rospy.get_param("~simulation", True)
+        module_ids_str = rospy.get_param("~module_ids", "1,2")
+        rospy.loginfo("SeparatedMoveToGateState: Module IDs: %s" % module_ids_str)
+        self.module_ids = [int(x) for x in module_ids_str.split(',')]
+        if len(self.module_ids) < 2:
+            rospy.logerr("SeparatedMoveToGateState: At least 2 module IDs are required.")
+
+        # Publishers    
+        self.beetle1_pub_topic = "/beetle{}/target_pose".format(self.module_ids[0])
+        self.beetle2_pub_topic = "/beetle{}/target_pose".format(self.module_ids[1])
+        self.beetle1_pub = rospy.Publisher(self.beetle1_pub_topic, PoseStamped, queue_size=1)
+        self.beetle2_pub = rospy.Publisher(self.beetle2_pub_topic, PoseStamped, queue_size=1)
+
+        # Subscribers
+        self.beetle1_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[0])
+        self.beetle2_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[1])
+        rospy.Subscriber(self.beetle1_sub_topic, PoseStamped, self.beetle1_callback, queue_size=1)
+        rospy.Subscriber(self.beetle2_sub_topic, PoseStamped, self.beetle2_callback, queue_size=1)
         self.pos_beetle1 = None
         self.pos_beetle2 = None
-        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
-        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
-        self.x_offset = 0.6
-        self.y_offset = 0.25 
+
+        # Valve position
         if self.is_simulation:
             self.pose_valve_sim = None
             self.valve_sim_sub = rospy.Subscriber("/valve/odom", Odometry, self.valve_sim_callback, queue_size=1)
         else:
             self.pose_valve = None
             self.valve_sub = rospy.Subscriber("/valve/mocap/pose", PoseStamped, self.valve_callback, queue_size=1)
-        self.avg_speed = 0.08
+
 
     def beetle1_callback(self, msg):
         self.pos_beetle1 = msg
@@ -273,9 +328,8 @@ class SeparatedMoveToValveState(smach.State):
         current_beetle1 = target_ascend_beetle1
         current_beetle2 = target_ascend_beetle2
 
-        safe_margin = 0.3
-        horiz_target_beetle1 = [valve_x, valve_y + self.y_offset, safe_altitude + safe_margin]
-        horiz_target_beetle2 = [valve_x + self.x_offset, valve_y - self.y_offset, safe_altitude + safe_margin]
+        horiz_target_beetle1 = [valve_x, valve_y + self.y_offset, safe_altitude + self.safety_margin]
+        horiz_target_beetle2 = [valve_x + self.x_offset, valve_y - self.y_offset, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving horizontally to above valve (with offset):\n  Beetle1: %s\n  Beetle2: %s",
                     horiz_target_beetle1, horiz_target_beetle2)
         t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
@@ -287,8 +341,8 @@ class SeparatedMoveToValveState(smach.State):
         current_beetle1 = horiz_target_beetle1
         current_beetle2 = horiz_target_beetle2
 
-        final_target_beetle1 = [valve_x, valve_y, safe_altitude + safe_margin]
-        final_target_beetle2 = [valve_x + self.x_offset, valve_y, safe_altitude + safe_margin]
+        final_target_beetle1 = [valve_x, valve_y, safe_altitude + self.safety_margin]
+        final_target_beetle2 = [valve_x + self.x_offset, valve_y, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving to final position above valve:\n  Beetle1: %s\n  Beetle2: %s",
                     final_target_beetle1, final_target_beetle2)
         t1 = execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
@@ -303,7 +357,10 @@ class SeparatedMoveToValveState(smach.State):
 
 class AssembleState(smach.State):
     def __init__(self):
+
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
+
+        # Module IDs
         modules_str = rospy.get_param("~module_ids", "")
         real_machine = rospy.get_param("~real_machine", True)
         modules = []
@@ -311,6 +368,8 @@ class AssembleState(smach.State):
             modules = [int(x) for x in modules_str.split(',')]
         else:
             rospy.logerr("No module ID is designated!")
+
+        # AssembleDemo 
         self.assemble_demo = AssemblyDemo(module_ids=modules, real_machine=real_machine)
     
     def execute(self, userdata):
@@ -326,38 +385,62 @@ class AssembleState(smach.State):
 
 
 class MoveAndRotateValveState(smach.State):
-    def __init__(self):
+    def __init__(self,
+                 z_offset_real = 0.47,# 0.21(when use the real valve instead of the valve_fake)
+                 z_offset_sim = 0.23,
+                 yaw_offset = 0,
+                 valve_rotation_angle_compenstation = 0.06,
+                 valve_rotation_angle = math.pi / 2.0,
+                 avg_speed = 0.15,
+                 avg_yaw_speed = 0.15,
+                 avg_valve_rotation_speed = 0.3,
+                 pos_initialization = False,
+                 exit_target = [4.0, 0.0, 1.0]):
+        
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
-        self.module_ids = [1, 2]
-        self.pos_beetle2 = PoseStamped()
-        self.pos_beetle1 = PoseStamped()
-        self.pos_valve = PoseStamped()
-        self.pos_valve_sim = Odometry()
-        self.is_simulation = rospy.get_param("~simulation", True)
-        self.beetle1_received = threading.Event()
-        self.beetle2_received = threading.Event()
-        self.valve_received = threading.Event()
-        self.pos_pub = rospy.Publisher("/assembly/uav/nav", FlightNav, queue_size=1)
-        from std_msgs.msg import Empty
-        self.test_pub = rospy.Publisher("/assembly/uav/test", Empty, queue_size=1)
 
-        self.pos_beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
-        self.pos_beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
+        self.z_offset_real = z_offset_real
+        self.z_offset_sim = z_offset_sim
+        self.yaw_offset = yaw_offset
+        self.valve_rotation_angle_compenstation = valve_rotation_angle_compenstation
+        self.valve_rotation_angle = valve_rotation_angle + self.valve_rotation_angle_compenstation
+        self.avg_speed = avg_speed
+        self.avg_yaw_speed = avg_yaw_speed
+        self.avg_valve_rotation_speed = avg_valve_rotation_speed
+        self.pos_initialization = pos_initialization
+        self.exit_target = exit_target
+
+        # Simulation flag
+        self.is_simulation = rospy.get_param("~simulation", True)
+
+        # Module IDs
+        module_ids_str = rospy.get_param("~module_ids", "1,2")
+        rospy.loginfo("SeparatedMoveToGateState: Module IDs: %s" % module_ids_str)
+        self.module_ids = [int(x) for x in module_ids_str.split(',')]
+        if len(self.module_ids) < 2:
+            rospy.logerr("SeparatedMoveToGateState: At least 2 module IDs are required.")
+
+        # Subscribers
+        self.beetle1_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[0])
+        self.beetle2_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[1])
+        rospy.Subscriber(self.beetle1_sub_topic, PoseStamped, self.beetle1_callback, queue_size=1)
+        rospy.Subscriber(self.beetle2_sub_topic, PoseStamped, self.beetle2_callback, queue_size=1)
         if self.is_simulation:
             self.pos_valve_sim_sub = rospy.Subscriber("/valve/odom", Odometry, self.valve_sim_callback, queue_size=1)
         else:
             self.pos_valve_sub = rospy.Subscriber("/valve/mocap/pose", PoseStamped, self.valve_callback, queue_size=1)
-        self.pos_initialization = False 
+
+        self.pos_beetle2 = PoseStamped()
+        self.pos_beetle1 = PoseStamped()
+        self.pos_valve = PoseStamped()
+        self.pos_valve_sim = Odometry()
+        self.beetle1_received = threading.Event()
+        self.beetle2_received = threading.Event()
+        self.valve_received = threading.Event()
+
+        # Publisher
+        self.pos_pub = rospy.Publisher("/assembly/uav/nav", FlightNav, queue_size=1)
         self.wait_for_initialization(timeout=10)
-        self.z_offset_real = 0.47  
-        self.z_offset_sim = 0.23
-        self.yaw_offset = 0
-        self.valve_rotation_angle_compenstation = 0.06
-        self.valve_rotation_angle = math.pi / 2.0  + self.valve_rotation_angle_compenstation
-        self.avg_speed = 0.15      
-        self.avg_yaw_speed = 0.15
-        self.avg_valve_rotation_speed = 0.3
-        self.exit_target = [4.0, 0.0, 1.0]
         
     def beetle2_callback(self, msg):
         self.pos_beetle2 = msg
@@ -380,8 +463,6 @@ class MoveAndRotateValveState(smach.State):
     def wait_for_initialization(self, timeout=10):
         rospy.sleep(0.5)
         from std_msgs.msg import Empty
-        test_data = Empty()
-        self.test_pub.publish(test_data)
         rospy.logwarn("Waiting for position messages...")
         events = [self.beetle1_received, self.beetle2_received, self.valve_received]
         all_received = all(event.wait(timeout) for event in events)
@@ -583,18 +664,35 @@ class MoveAndRotateValveState(smach.State):
             return 'failed'
 
 class AssembledLeaveState(smach.State):
-    def __init__(self):
+    def __init__(self,
+                 exit_target = [6.0, 0.0, 1.0],
+                 avg_speed = 0.1):
+        
         smach.State.__init__(self, outcomes=['succeeded', 'failed'])
+
+        self.exit_maze = exit_target
+        self.avg_speed = avg_speed
+
+        # Publisher
         self.pos_pub = rospy.Publisher("/assembly/uav/nav", FlightNav, queue_size=10)
-        self.module_ids = [1, 2]
-        self.exit_maze = [6.0, 0.0, 1.0]
-        self.avg_speed = 0.1
+
+        # Module IDs
+        module_ids_str = rospy.get_param("~module_ids", "1,2")
+        rospy.loginfo("SeparatedMoveToGateState: Module IDs: %s" % module_ids_str)
+        self.module_ids = [int(x) for x in module_ids_str.split(',')]
+        if len(self.module_ids) < 2:
+            rospy.logerr("SeparatedMoveToGateState: At least 2 module IDs are required.")
+
+        # Subscribers
+        self.beetle1_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[0])
+        self.beetle2_sub_topic = "/beetle{}/mocap/pose".format(self.module_ids[1])
+        rospy.Subscriber(self.beetle1_sub_topic, PoseStamped, self.beetle1_callback, queue_size=1)
+        rospy.Subscriber(self.beetle2_sub_topic, PoseStamped, self.beetle2_callback, queue_size=1)
+
         self.beetle1_pose = PoseStamped()
         self.beetle2_pose = PoseStamped()
         self.beetle1_received = threading.Event()
         self.beetle2_received = threading.Event()
-        self.beetle1_sub = rospy.Subscriber("/beetle1/mocap/pose", PoseStamped, self.beetle1_callback, queue_size=1)
-        self.beetle2_sub = rospy.Subscriber("/beetle2/mocap/pose", PoseStamped, self.beetle2_callback, queue_size=1)
 
     def beetle1_callback(self, msg):
         self.beetle1_pose = msg
