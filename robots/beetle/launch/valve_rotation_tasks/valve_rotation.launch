@@ -9,7 +9,7 @@
   <arg name="valve_y" default="0"/>
   <arg name="valve_yaw" default="0"/>
 
-  <include file="$(find beetle)/launch/valve_pos.launch">
+  <include file="$(find beetle)/launch/valve_rotation_tasks/valve_pos.launch">
     <arg name="real_machine" value="$(arg real_machine)" />
     <arg name="simulation" value="$(arg simulation)" />
     <arg name="robot_ns" value="$(arg valve_ns)" />
