@@ -433,6 +433,7 @@ class AssemblyState(smach.State):
         self.leader = leader
         self.leader_id = leader_id
         self.attach_dir = attach_dir
+        self.is_simulation = rospy.get_param("~simlation", True)
 
         # flags
         self.emergency_flag = False
@@ -479,11 +480,12 @@ class AssemblyState(smach.State):
         self.flag_msg.value = '1'
         self.flag_pub_leader.publish(self.flag_msg)
         rospy.sleep(0.3)
-        try:
-            link_attacher = GazeboLinkAttacher(self.robot_name, 'root', self.leader, 'root')
-            link_attacher.attach_links()
-        except rospy.ServiceException:
-            rospy.loginfo("Attacher failed")        
+        if not self.real_machine:
+            try:
+                link_attacher = GazeboLinkAttacher(self.robot_name, 'root', self.leader, 'root')
+                link_attacher.attach_links()
+            except rospy.ServiceException:
+                rospy.loginfo("Attacher failed")        
         rospy.sleep(4.0)
 
         return 'done'
@@ -517,7 +519,7 @@ class AssembleDemo():
         sis = smach_ros.IntrospectionServer('smach_server', sm_top, '/SM_ROOT')
         sis.start()
         outcome = sm_top.execute()
-        # rospy.spin()
+        # rospy.spin() #为了确保状态机的正常运行，故注释
         # sis.stop()
         # 保持ROS节点运行
         while not rospy.is_shutdown() and outcome not in ['succeeded', 'interupted']:
