@@ -168,11 +168,11 @@ class MoveAndRotateValveState(smach.State):
         _, _, yaw2 = euler_from_quaternion(quaternion2)
         return (yaw1 + yaw2) / 2.0
 
-    def pos_check(self, tolerance=0.3):
+    def pos_check(self, tolerance, checkpoint_x, checkpoint_y, checkpoint_z):
         self.update_current_pos()  
-        error_x = abs(self.current_pos.pose.position.x - self.start_x)
-        error_y = abs(self.current_pos.pose.position.y - self.start_y)
-        error_z = abs(self.current_pos.pose.position.z - self.start_z)
+        error_x = abs(self.current_pos.pose.position.x - checkpoint_x)
+        error_y = abs(self.current_pos.pose.position.y - checkpoint_y)
+        error_z = abs(self.current_pos.pose.position.z - checkpoint_z)
         rospy.loginfo(f"Checking position - Errors: x={error_x}, y={error_y}, z={error_z}")
         if error_x < tolerance and error_y < tolerance and error_z < tolerance:
             rospy.loginfo("Successfully went to the position.")
@@ -341,10 +341,20 @@ class MoveAndRotateValveState(smach.State):
         rospy.loginfo("Moving horizontally to the valve position...")
         self.move_to_target_poly(self.valve_x, self.valve_y, self.current_pos.pose.position.z, avg_speed=self.avg_speed)
         time.sleep(1)
+        if self.pos_check(0.3, self.valve_x, self.valve_y, self.current_pos.pose.position.z):
+            rospy.loginfo("Arrived at the valve position.")
+        else:
+            rospy.logwarn("Failed to arrive at the valve position.")
+            return 'failed'
         rospy.loginfo("Descending to the valve operation height...")
         target_z = self.valve_z + (self.z_offset_sim if self.is_simulation else self.z_offset_real)
         self.move_to_target_poly(self.valve_x, self.valve_y, target_z, avg_speed=self.avg_speed)
         time.sleep(2)
+        if self.pos_check(0.3, self.valve_x, self.valve_y, target_z):
+            rospy.loginfo("Arrived at the valve operation height.")
+        else:
+            rospy.logwarn("Failed to arrive at the valve operation height.")
+            return 'failed'
         rospy.loginfo("Arrived at the valve position. Starting valve rotation...")
         self.rotate_to_target_poly(self.valve_rotation_angle + self.yaw_offset, avg_yaw_speed=self.avg_valve_rotation_speed,
                                      fixed_x=self.valve_x, fixed_y=self.valve_y, fixed_z=target_z)
@@ -356,7 +366,7 @@ class MoveAndRotateValveState(smach.State):
         time.sleep(1)
         rospy.loginfo("Returning to start position...")
         self.move_to_target_poly(self.start_x, self.start_y, self.start_z, avg_speed=self.avg_speed)
-        if self.pos_check():
+        if self.pos_check(0.3, self.start_x, self.start_y, self.start_z):
             rospy.loginfo("Returned to start position successfully.")
             return 'succeeded'
         else:

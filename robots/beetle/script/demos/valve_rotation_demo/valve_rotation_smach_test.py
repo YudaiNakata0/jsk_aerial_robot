@@ -3,6 +3,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../valve_rotation_demo'))
 import rospy
 import smach
 import smach_ros
@@ -16,7 +17,7 @@ from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 from task.assembly_motion import *
 from valve_rotation_demo.trajectory import PolynomialTrajectory
-from valve_rotation_demo.motion_controller import *
+from valve_rotation_demo.motion_controller import MotionController
 
 class SeparatedMoveToGateState(smach.State):
     def __init__(self,
@@ -96,8 +97,8 @@ class SeparatedMoveToGateState(smach.State):
         rospy.loginfo("SeparatedMoveToGateState: Moving UAVs to target positions: UAV1: %s, UAV2: %s" %
                       (target_beetle1, target_beetle2))
 
-        t1 = MotionController.MotionController.poly_motion(self.beetle1_pub, start_beetle1, target_beetle1, self.avg_speed)
-        t2 = MotionController.poly_motion(self.beetle2_pub, start_beetle2, target_beetle2, self.avg_speed)
+        t1 = MotionController.execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_beetle1, self.avg_speed)
+        t2 = MotionController.execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -210,8 +211,8 @@ class SeparatedMoveToValveState(smach.State):
         target_ascend_beetle2 = [start_beetle2[0], start_beetle2[1], safe_altitude]
         rospy.loginfo("SeparatedMoveToValveState: Ascending to safe altitude:\n  Beetle1: %s\n  Beetle2: %s",
                     target_ascend_beetle1, target_ascend_beetle2)
-        t1 = MotionController.poly_motion(self.beetle1_pub, start_beetle1, target_ascend_beetle1, self.avg_speed)
-        t2 = MotionController.poly_motion(self.beetle2_pub, start_beetle2, target_ascend_beetle2, self.avg_speed)
+        t1 = MotionController.execute_poly_motion_pose_async(self.beetle1_pub, start_beetle1, target_ascend_beetle1, self.avg_speed)
+        t2 = MotionController.execute_poly_motion_pose_async(self.beetle2_pub, start_beetle2, target_ascend_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -223,8 +224,8 @@ class SeparatedMoveToValveState(smach.State):
         horiz_target_beetle2 = [valve_x + self.x_offset, valve_y - self.y_offset, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving horizontally to above valve (with offset):\n  Beetle1: %s\n  Beetle2: %s",
                     horiz_target_beetle1, horiz_target_beetle2)
-        t1 = MotionController.poly_motion(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
-        t2 = MotionController.poly_motion(self.beetle2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
+        t1 = MotionController.execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, horiz_target_beetle1, self.avg_speed)
+        t2 = MotionController.execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, horiz_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
@@ -236,8 +237,8 @@ class SeparatedMoveToValveState(smach.State):
         final_target_beetle2 = [valve_x + self.x_offset, valve_y, safe_altitude + self.safety_margin]
         rospy.loginfo("SeparatedMoveToValveState: Moving to final position above valve:\n  Beetle1: %s\n  Beetle2: %s",
                     final_target_beetle1, final_target_beetle2)
-        t1 = MotionController.poly_motion(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
-        t2 = MotionController.poly_motion(self.beetle2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
+        t1 = MotionController.execute_poly_motion_pose_async(self.beetle1_pub, current_beetle1, final_target_beetle1, self.avg_speed)
+        t2 = MotionController.execute_poly_motion_pose_async(self.beetle2_pub, current_beetle2, final_target_beetle2, self.avg_speed)
         t1.join()
         t2.join()
         time.sleep(2)
