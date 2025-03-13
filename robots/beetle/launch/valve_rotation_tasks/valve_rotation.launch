@@ -20,8 +20,8 @@
   </include>
 
   <!-- <node pkg="beetle" type="valve_rotation_smach_test.py" name="valve_rotation_smach_test" output="screen"> -->
-  <!-- <node pkg="beetle" type="valve_rotation_test.py" name="valve_rotation_test" output="screen"> -->
-  <node pkg="beetle" type="valve_rotation_assemble_test.py" name="valve_rotation_test" output="screen">
+  <node pkg="beetle" type="valve_rotation_test.py" name="valve_rotation_test" output="screen">
+  <!-- <node pkg="beetle" type="valve_rotation_assemble_test.py" name="valve_rotation_test" output="screen"> -->
 
 
 

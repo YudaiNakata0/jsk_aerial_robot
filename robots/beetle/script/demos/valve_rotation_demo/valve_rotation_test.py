@@ -235,7 +235,6 @@ class MoveAndRotateValveState(smach.State):
 
     def wait_for_initialization(self, timeout=10):
         rospy.sleep(0.5)
-        from std_msgs.msg import Empty
         rospy.logwarn("Waiting for position messages...")
         events = [self.beetle1_received, self.beetle2_received, self.valve_received]
         all_received = all(event.wait(timeout) for event in events)
@@ -252,8 +251,8 @@ class MoveAndRotateValveState(smach.State):
         self.current_pos.pose.position.x = (self.pos_beetle2.pose.position.x + self.pos_beetle1.pose.position.x) / len(self.module_ids)
         self.current_pos.pose.position.y = (self.pos_beetle2.pose.position.y + self.pos_beetle1.pose.position.y) / len(self.module_ids)
         self.current_pos.pose.position.z = (self.pos_beetle2.pose.position.z + self.pos_beetle1.pose.position.z) / len(self.module_ids)
-
     def pos_initialize(self):
+
         self.start_x = (self.pos_beetle2.pose.position.x + self.pos_beetle1.pose.position.x) / len(self.module_ids)
         self.start_y = (self.pos_beetle2.pose.position.y + self.pos_beetle1.pose.position.y) / len(self.module_ids)
         self.start_z = (self.pos_beetle2.pose.position.z + self.pos_beetle1.pose.position.z) / len(self.module_ids)
