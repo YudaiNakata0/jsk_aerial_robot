@@ -17,6 +17,7 @@ from tf.transformations import euler_from_quaternion
 from task.assembly_motion import *
 from valve_rotation_demo.trajectory import PolynomialTrajectory
 from valve_rotation_demo.motion_controller import *
+from valve_rotation_demo.base_UAV_state import BaseUAVState
 
 class AssembleState(smach.State):
     def __init__(self):
@@ -181,7 +182,7 @@ class MoveAndRotateValveState(smach.State):
             rospy.logwarn("Failed to went to the position.")
             return False
 
-    def move_to_target_poly(self, target_x, target_y, target_z, avg_speed=None):
+    def move_to_target_poly(self, target_x, target_y, target_z, avg_speed=None, max_correction_duration=5):
         if avg_speed is None:
             avg_speed = self.avg_speed
         self.update_current_pos()
@@ -217,7 +218,6 @@ class MoveAndRotateValveState(smach.State):
         rospy.loginfo("Reached target position.")
         tolerance = 0.1  
         k_p = 0.2        
-        max_correction_duration = 5  
         start_correction_time = rospy.Time.now().to_sec()
         
         while not rospy.is_shutdown():
@@ -256,7 +256,7 @@ class MoveAndRotateValveState(smach.State):
                 rospy.logwarn("Terminal correction exceeded maximum duration.")
                 break
 
-    def rotate_to_target_poly(self, target_yaw, avg_yaw_speed=None, fixed_x=None, fixed_y=None, fixed_z=None):
+    def rotate_to_target_poly(self, target_yaw, avg_yaw_speed=None, fixed_x=None, fixed_y=None, fixed_z=None, max_correction_duration=5):
         if avg_yaw_speed is None:
             avg_yaw_speed = self.avg_yaw_speed
         current_yaw = self.get_uav_yaw()
@@ -289,10 +289,9 @@ class MoveAndRotateValveState(smach.State):
             rate.sleep()
         rospy.loginfo("Rotation complete, reached target yaw.")
         time.sleep(2)
-         # 增加闭环位置修正，确保无人机位置回到指定的固定位置
+         # 闭环位置修正
         tolerance = 0.01  
         k_p = 0.2        
-        max_correction_duration = 5 
         start_correction_time = rospy.Time.now().to_sec()
         
         while not rospy.is_shutdown():
@@ -319,7 +318,7 @@ class MoveAndRotateValveState(smach.State):
             pos_cmd.pos_z_nav_mode = FlightNav.POS_MODE
             pos_cmd.target_pos_z = current_z + correction_z
             pos_cmd.yaw_nav_mode = FlightNav.POS_MODE
-            pos_cmd.target_yaw = target_yaw  # 保持目标偏航角
+            pos_cmd.target_yaw = target_yaw  # 保持yaw角
             self.pos_pub.publish(pos_cmd)
             rate.sleep()
             if rospy.Time.now().to_sec() - start_correction_time > max_correction_duration:

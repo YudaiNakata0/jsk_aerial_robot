@@ -4,6 +4,12 @@ import numpy as np
 from tf.transformations import euler_from_quaternion
 from task.assembly_motion import *
 
+#!/usr/bin/env python
+import rospy
+import numpy as np
+from tf.transformations import euler_from_quaternion
+from task.assembly_motion import *
+
 class PolynomialTrajectory:
     def __init__(self, duration):
         self.duration = duration
@@ -15,7 +21,12 @@ class PolynomialTrajectory:
         self.is_scalar = False  
 
     def compute_coefficients(self, start, target):
+        # 如果目标与起始几乎一致，返回一个常数解，避免求解奇异矩阵
+        if abs(target - start) < 1e-6:
+            return np.array([0, 0, 0, 0, 0, start])
         T = self.duration
+        if T <= 0:
+            raise ValueError("Duration must be positive.")
         A = np.array([
             [0,         0,      0,    0,  0, 1],
             [T**5,     T**4,   T**3,  T**2, T, 1],
@@ -26,7 +37,7 @@ class PolynomialTrajectory:
         ])
         B = np.array([start, target, 0, 0, 0, 0])
         return np.linalg.solve(A, B)
-
+    
     def generate_trajectory(self, start_pos, target_pos):
         if isinstance(start_pos, (int, float)) and isinstance(target_pos, (int, float)):
             self.is_scalar = True
