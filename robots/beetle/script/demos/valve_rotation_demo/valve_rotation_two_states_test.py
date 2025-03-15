@@ -17,7 +17,7 @@ from tf.transformations import euler_from_quaternion
 from task.assembly_motion import *
 from valve_rotation_demo.trajectory import PolynomialTrajectory
 from valve_rotation_demo.motion_controller import *
-from valve_rotation_demo.base_UAV_state import BaseUAVState
+# from valve_rotation_demo.base_UAV_state import AssemblyMotionStateBase
 
 class AssembleState(smach.State):
     def __init__(self):
@@ -50,7 +50,7 @@ class AssembleState(smach.State):
 
 class MoveAndRotateValveState(smach.State):
     def __init__(self,
-                 z_offset_real = 0.47,# 0.21(when use the real valve instead of the valve_fake)
+                 z_offset_real = 0.31,# 0.21(when use the real valve instead of the valve_fake),0.47(when use the valve_fake)
                  z_offset_sim = 0.23,
                  yaw_offset = 0,
                  valve_rotation_angle_compenstation = 0.06,
@@ -389,4 +389,3 @@ if __name__ == '__main__':
         main()
     except rospy.ROSInterruptException:
         pass
-

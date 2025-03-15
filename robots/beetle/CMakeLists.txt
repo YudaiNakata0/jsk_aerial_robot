@@ -78,8 +78,5 @@ catkin_install_python(PROGRAMS
   script/demos/valve_rotation_demo/valve_rotation_two_states_test.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
-catkin_install_python(PROGRAMS
-  script/demos/valve_rotation_demo/valve_rotation_assemble_test.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
+
 

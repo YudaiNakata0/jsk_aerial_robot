@@ -6,12 +6,16 @@ import time
 import math
 import threading
 import numpy as np
+import sys
+import os
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from aerial_robot_msgs.msg import FlightNav
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
 from task.assembly_motion import *
-from trajectory import PolynomialTrajectory
+from valve_rotation_demo.trajectory import PolynomialTrajectory
 
 class MotionController:
     def __init__(self):
