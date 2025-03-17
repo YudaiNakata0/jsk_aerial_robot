@@ -50,9 +50,9 @@ class AssembleState(smach.State):
 
 class MoveAndRotateValveState(smach.State):
     def __init__(self,
-                 z_offset_real = 0.31,# 0.21(when use the real valve instead of the valve_fake),0.47(when use the valve_fake)
+                 z_offset_real = 0.21,# 0.21(when use the real valve instead of the valve_fake),0.47(when use the valve_fake)
                  z_offset_sim = 0.23,
-                 yaw_offset = 0,
+                 yaw_offset = math.pi / 8.0,
                  valve_rotation_angle_compenstation = 0.06,
                  valve_rotation_angle = math.pi / 2.0,
                  avg_speed = 0.15,

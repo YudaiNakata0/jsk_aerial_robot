@@ -562,8 +562,11 @@ void BeetleNavigator::assemblyNavCallback(const aerial_robot_msgs::FlightNavCons
   if(msg->pos_z_nav_mode == aerial_robot_msgs::FlightNav::VEL_MODE)
     {
       /* special */
-      addTargetPosZ(msg->target_pos_diff_z);
-      setTargetVelZ(0);
+      // addTargetPosZ(msg->target_pos_diff_z);
+      // setTargetVelZ(0);
+      // Support VEL control for Z axis in  assembly mode
+      setTargetVelZ(msg->target_vel_z);
+      teleop_reset_time_ = teleop_reset_duration_ + ros::Time::now().toSec();
     }
   else if(msg->pos_z_nav_mode == aerial_robot_msgs::FlightNav::POS_MODE)
     {

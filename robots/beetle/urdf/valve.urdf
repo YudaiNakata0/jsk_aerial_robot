@@ -9,15 +9,10 @@
   <xacro:arg name="no_collsion" default="false" />
   <xacro:property name="valve_height" value="${0.3 + $(arg valve_pitch_angle) * 0.01}" />
   <xacro:property name="i_beam_length" value="1.5" />
-  <xacro:property name="i_beam_width" value="0.05" /> 
-  <xacro:property name="i_beam_height" value="0.05" /> 
+  <xacro:property name="i_beam_width" value="0.015" /> 
+  <xacro:property name="i_beam_height" value="0.015" /> 
   <xacro:property name="i_beam_mass" value="0.3" /> 
   <xacro:arg name="no_collision" default="false"/>
-
-
-<!-- 2024/10/25 -->
-  <!-- <xacro:property name="pi" value="3.141592653589793" />  -->
-
 
   <material name="red">
     <color rgba="1 0 0 1"/>
