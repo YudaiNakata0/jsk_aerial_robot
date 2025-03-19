@@ -62,7 +62,7 @@ class SeparatedMoveToGateState(SeperatedMotionStateBase):
 class SeparatedMoveToValveState(SeperatedMotionStateBase):
     def __init__(self,
                  maze_length = 1.0,
-                 x_offset = 0.6,
+                 x_offset = 0.65,
                  y_offset = 0.25,
                  avg_speed = 0.1,
                  safety_margin = 0.3):
@@ -190,7 +190,8 @@ class AssembleState(smach.State):
 class MoveAndRotateValveState(AssemblyMotionStateBase):
     def __init__(self,
                  z_offset_real = 0.47,# 0.21(when use the real valve instead of the valve_fake)
-                 z_offset_sim = 0.23,
+                 z_offset_sim = 0.05,#0.23
+                 z_offset_safe = 0.3,
                  yaw_offset = 0,
                  valve_rotation_angle_compenstation = 0.06,
                  valve_rotation_angle = math.pi / 2.0,
@@ -204,6 +205,7 @@ class MoveAndRotateValveState(AssemblyMotionStateBase):
 
         self.z_offset_real = z_offset_real
         self.z_offset_sim = z_offset_sim
+        self.z_offset_safe = z_offset_safe
         self.yaw_offset = yaw_offset
         self.valve_rotation_angle_compenstation = valve_rotation_angle_compenstation
         self.valve_rotation_angle = valve_rotation_angle + self.valve_rotation_angle_compenstation
@@ -230,7 +232,7 @@ class MoveAndRotateValveState(AssemblyMotionStateBase):
     
     def valve_sim_callback(self, msg):
         self.pos_valve_sim = msg
-        self.pos_valve_sim_sub.unregister()
+        # self.pos_valve_sim_sub.unregister()
         self.valve_received.set()
 
     def wait_for_initialization(self, timeout=10):
@@ -281,17 +283,17 @@ class MoveAndRotateValveState(AssemblyMotionStateBase):
         target = (self.valve_pos[0], self.valve_pos[1], self.current_pos.pose.position.z)
         self.move_to_target_poly(target, avg_speed=self.avg_speed-0.05)
         time.sleep(1)
-        if self.pos_check(0.3, self.valve_pos[0], self.valve_pos[1], self.current_pos.pose.position.z):
+        if self.pos_check((self.valve_pos[0], self.valve_pos[1], self.valve_pos[2]), self.current_pos.pose.position.z):
             rospy.loginfo("Arrived at the valve position.")
         else:
             rospy.logwarn("Failed to arrive at the valve position.")
             return 'failed'
         
         rospy.loginfo("Descending to the valve operation height...")
-        target_z = self.valve_z + (self.z_offset_sim if self.is_simulation else self.z_offset_real)
-        self.move_to_target_poly(self.valve_pos[0], self.valve_pos[1], target_z, avg_speed=self.avg_speed)
+        target_z = self.valve_pos[2] + (self.z_offset_sim if self.is_simulation else self.z_offset_real)
+        self.move_to_target_poly((self.valve_pos[0], self.valve_pos[1], target_z), self.avg_speed)
         time.sleep(2)
-        if self.pos_check(0.3, self.valve_pos[0], self.valve_pos[1], target_z):
+        if self.pos_check((self.valve_pos[0], self.valve_pos[1], target_z)):
             rospy.loginfo("Arrived at the valve operation height.")
         else:
             rospy.logwarn("Failed to arrive at the valve operation height.")
@@ -302,13 +304,15 @@ class MoveAndRotateValveState(AssemblyMotionStateBase):
         time.sleep(2)
         
         rospy.loginfo("Valve rotation completed. Hovering at start altitude...")
-        self.move_to_target_poly(self.valve_pos[0], self.valve_pos[1], self.start_pos[2], avg_speed=self.avg_speed)
+        rospy.loginfo("start pos_z: {}".format(self.start_pos[2]))
+        rospy.loginfo("current pos_z: {}".format(self.current_pos.pose.position.z))
+        self.move_to_target_poly((self.valve_pos[0], self.valve_pos[1], self.start_pos[2]+self.z_offset_safe),self.avg_speed)
         self.rotate_to_target_poly(0.0, avg_yaw_speed=self.avg_yaw_speed, fixed_pos=(self.valve_pos[0], self.valve_pos[1], self.start_pos[2]))
         time.sleep(1)
         
         rospy.loginfo("Returning to start position...")
-        self.move_to_target_poly(self.start_pos[0], self.start_pos[1], self.start_pos[2], avg_speed=self.avg_speed)
-        if self.pos_check(0.3, self.start_pos[0], self.start_pos[1], self.start_pos[2]):
+        self.move_to_target_poly((self.start_pos[0], self.start_pos[1], self.start_pos[2]), self.avg_speed)
+        if self.pos_check(self.start_pos, 0.3):
             rospy.loginfo("Returned to start position successfully.")
             return 'succeeded'
         else:
@@ -340,10 +344,10 @@ class AssembledLeaveState(AssemblyMotionStateBase):
             rospy.sleep(0.1)
         current = self.get_current_pose()
         rospy.loginfo("Current pose is: {}".format(current))
-        self.move_to_target_poly(self.exit_target, avg_speed=self.avg_speed)
+        self.move_to_target_poly(self.exit_maze, avg_speed=self.avg_speed)
         rospy.sleep(2)
-        if self.pos_check(self.exit_target):
-            rospy.loginfo("Assem bledLeaveState: Successfully left the valve area.")
+        if self.pos_check(self.exit_maze):
+            rospy.loginfo("AssembledLeaveState: Successfully left the valve area.")
             return 'succeeded'
         else:
             rospy.logwarn("AssembledLeaveState: Failed to leave the valve area.")

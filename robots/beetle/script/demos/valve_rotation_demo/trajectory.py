@@ -21,7 +21,6 @@ class PolynomialTrajectory:
         self.is_scalar = False  
 
     def compute_coefficients(self, start, target):
-        # 如果目标与起始几乎一致，返回一个常数解，避免求解奇异矩阵
         if abs(target - start) < 1e-6:
             return np.array([0, 0, 0, 0, 0, start])
         T = self.duration
