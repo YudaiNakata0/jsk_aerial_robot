@@ -12,7 +12,7 @@ class MyClass():
         self.current_z = 0.0
         self.sub_current_pose = rospy.Subscriber("/gimbalrotor/mocap/pose", PoseStamped, self.cb_get_current_pose)
         self.sub_goal_pose = rospy.Subscriber("/set_goal", Vector3, self.cb_set_goal_pose)
-        self.pub = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=10)
+        self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
 
     def cb_get_current_pose(self, msg):
         self.current_x = msg.pose.position.x
@@ -29,7 +29,7 @@ class MyClass():
     def calc_goal_pose(self, msg):
         direction_x = msg.x - self.current_x
         direction_y = msg.y - self.current_y
-        yaw = math.atan2(direction_y, direction_x)
+        yaw = math.atan2(direction_y, direction_x) * 180 / math.pi
         rospy.loginfo("yaw angle: %s", yaw)
         quaternion = cq.euler_to_quaternion(np.array([0, 0, yaw]))
         pub_msg = PoseStamped()
