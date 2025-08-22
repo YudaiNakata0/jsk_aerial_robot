@@ -20,15 +20,18 @@ class MyClass():
         self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
         self.tfBuffer = tf2_ros.Buffer()
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
+        self.timer = rospy.Timer(rospy.Duration(0.1), self.cb_update_end_effector_pose)
 
-        #todo tfを読み取ってエンドエフェクタ位置を取得
+    def cb_update_end_effector_pose(self, event):
+        self.get_end_effector_current_pose()
+
     def get_end_effector_current_pose(self):
         try:
             trans = self.tfBuffer.lookup_transform("world", "gimbalrotor/end_effector", rospy.Time(0))
             self.end_effector_pose.position = trans.transform.translation
             self.end_effector_pose.orientation = trans.transform.rotation
-            rospy.loginfo("End effector position: %s", self.end_effector_pose.position)
-            rospy.loginfo("End effector orientation: %s", self.end_effector_pose.orientation)
+            #rospy.loginfo("End effector position: %s", self.end_effector_pose.position)
+            #rospy.loginfo("End effector orientation: %s", self.end_effector_pose.orientation)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             print("Error\n")
         
@@ -45,7 +48,7 @@ class MyClass():
         self.pub.publish(msg)
 
     def calc_cog_goal_pose(self, msg):
-        self.get_end_effector_current_pose()
+        #self.get_end_effector_current_pose()
         direction_x = msg.x - self.end_effector_pose.position.x
         direction_y = msg.y - self.end_effector_pose.position.y
         
