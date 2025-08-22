@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import rospy
+import tf2_ros
 import math
 import numpy as np
-from geometry_msgs.msg import PoseStamped, Vector3
+from geometry_msgs.msg import PoseStamped, Vector3, Point, Quaternion, Pose
 from nav_msgs.msg import Odometry
 from module import convert_to_quaternion as cq
 
@@ -13,15 +14,23 @@ class MyClass():
         self.current_x_g = 0.0
         self.current_y_g = 0.0
         self.current_z_g = 0.0
-        self.current_x_e = 0.0
-        self.current_y_e = 0.0
-        self.current_z_e = 0.0
+        self.end_effector_pose = Pose()
         self.sub_current_pose = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_get_cog_current_pose)
         self.sub_goal_pose = rospy.Subscriber("/set_goal", Vector3, self.cb_set_goal_pose)
         self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
+        self.tfBuffer = tf2_ros.Buffer()
+        self.listener = tf2_ros.TransformListener(self.tfBuffer)
 
         #todo tfを読み取ってエンドエフェクタ位置を取得
     def get_end_effector_current_pose(self):
+        try:
+            trans = self.tfBuffer.lookup_transform("world", "gimbalrotor/end_effector", rospy.Time(0))
+            self.end_effector_pose.position = trans.transform.translation
+            self.end_effector_pose.orientation = trans.transform.rotation
+            rospy.loginfo("End effector position: %s", self.end_effector_pose.position)
+            rospy.loginfo("End effector orientation: %s", self.end_effector_pose.orientation)
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            print("Error\n")
         
     def cb_get_cog_current_pose(self, msg):
         self.current_x_g = msg.pose.pose.position.x
@@ -36,8 +45,9 @@ class MyClass():
         self.pub.publish(msg)
 
     def calc_cog_goal_pose(self, msg):
-        direction_x = msg.x - self.current_x_g
-        direction_y = msg.y - self.current_y_g
+        self.get_end_effector_current_pose()
+        direction_x = msg.x - self.end_effector_pose.position.x
+        direction_y = msg.y - self.end_effector_pose.position.y
         
         yaw = math.atan2(direction_y, direction_x)
         yaw_degree = yaw * 180 / math.pi
