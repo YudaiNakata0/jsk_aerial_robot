@@ -5,7 +5,7 @@ import math
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Vector3, Point, Quaternion, Pose
 from nav_msgs.msg import Odometry
-from module import convert_to_quaternion as cq
+from module import operation_quaternion as oq
 
 class MyClass():
     def __init__(self):
@@ -55,7 +55,7 @@ class MyClass():
         yaw = math.atan2(direction_y, direction_x)
         yaw_degree = yaw * 180 / math.pi
         rospy.loginfo("yaw angle: %s", yaw_degree)
-        quaternion = cq.euler_to_quaternion(np.array([0, 0, yaw_degree]))
+        quaternion = oq.euler_to_quaternion(np.array([0, 0, yaw_degree]))
         
         pub_msg = PoseStamped()
         pub_msg.pose.position.x = msg.x - (self.d * math.cos(yaw))
