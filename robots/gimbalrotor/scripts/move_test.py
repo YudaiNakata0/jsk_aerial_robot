@@ -3,7 +3,7 @@ import rospy
 import math
 import numpy as np
 from geometry_msgs.msg import PoseStamped, Vector3
-from module import convert_to_quaternion as cq
+from module import operation_quaternion as oq
 
 class MyClass():
     def __init__(self):
@@ -31,7 +31,7 @@ class MyClass():
         direction_y = msg.y - self.current_y
         yaw = math.atan2(direction_y, direction_x) * 180 / math.pi
         rospy.loginfo("yaw angle: %s", yaw)
-        quaternion = cq.euler_to_quaternion(np.array([0, 0, yaw]))
+        quaternion = oq.euler_to_quaternion(np.array([0, 0, yaw]))
         pub_msg = PoseStamped()
         pub_msg.pose.position.x = msg.x
         pub_msg.pose.position.y = msg.y
