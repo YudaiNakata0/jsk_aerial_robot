@@ -3,7 +3,7 @@ import rospy
 import tf2_ros
 import math
 import numpy as np
-from std_msgs.msg import String, Int8
+from std_msgs.msg import String, Int8, Empty
 from geometry_msgs.msg import PoseStamped, Vector3, Point, Quaternion, Pose
 from nav_msgs.msg import Odometry
 from module import operation_quaternion as oq
@@ -27,8 +27,15 @@ class Navigation():
         12: moving(short way)
         13: completed move(short way)
         """
+        self.direction_mode = 0
+        """
+        direction_mode
+        0 : position direction
+        1 : pose direction
+        """
 
         self.msg_register = Vector3()
+        self.msg_register_pose = Pose()
         self.endeffector_pose = Pose()
         self.endeffector_goal_pos = Vector3()
         self.cog_pose = Pose()
@@ -49,7 +56,8 @@ class Navigation():
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.timer = rospy.Timer(rospy.Duration(0.1), self.cb_update_endeffector_pose)
         self.sub_cog_current_pose = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_get_cog_current_pose)
-        self.sub_endeffector_goal_pose = rospy.Subscriber("/set_goal", Vector3, self.cb_set_cog_goal_pose)
+        self.sub_endeffector_goal_position = rospy.Subscriber("/set_goal", Vector3, self.cb_set_cog_goal_pose_mode0)
+        self.sub_endeffector_goal_pose = rospy.Subscriber("/set_goal_pose", Pose, self.cb_set_cog_goal_pose_mode1)
         self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
         self.state_pub = rospy.Publisher("/end_effector/pose", Pose, queue_size=10)
         self.timer_waypoint = rospy.Timer(rospy.Duration(0.1), self.cb_generate_cog_waypoint_list)
@@ -57,6 +65,7 @@ class Navigation():
         self.sub_contact = rospy.Subscriber("/read_sensor", String, self.cb_detect_contact)
         self.timer_state = rospy.Timer(rospy.Duration(0.1), self.cb_publish_state)
         self.pub_state = rospy.Publisher("/my_flight_state", Int8, queue_size=10)
+        self.pub_gpio = rospy.Publisher("/set_gpio", Empty, queue_size=10)
 
     #エンドエフェクタの位置姿勢更新
     def cb_update_endeffector_pose(self, event):
@@ -77,24 +86,45 @@ class Navigation():
         self.cog_yaw = angles[2]
 
     #コールバック:重心の目標位置姿勢取得(in:Vector3),トピックの記録
-    def cb_set_cog_goal_pose(self, msg):
+    def cb_set_cog_goal_pose_mode0(self, msg):
         self.msg_register = msg
+        self.direction_mode = 0
+        self.set_cog_goal_pose(msg)
+    def cb_set_cog_goal_pose_mode1(self, msg):
+        self.msg_register_pose = msg
+        self.direction_mode = 1
         self.set_cog_goal_pose(msg)
     #重心の目標位置姿勢取得(in:Vector3)
     def set_cog_goal_pose(self, msg):
         self.cog_start_pose = self.cog_pose
-        self.set_direction(msg)
+        if self.direction_mode == 0:
+            self.set_direction_mode0(msg)
+        elif self.direction_mode == 1:
+            self.set_direction_mode1(msg)
+            
         if self.distance > self.path_length*2:
-            self.calc_pose_endeffector_to_cog(msg)
+            if self.direction_mode == 0:
+                self.calc_pose_endeffector_to_cog(msg)
+            elif self.direction_mode == 1:
+                self.calc_pose_endeffector_to_cog(msg.position)
             self.partition()
             self.state = 1
         else:
             self.simple_move()
     #目標へのベクトル,角度,距離計算(in:Vector3)
-    def set_direction(self, vec):
+    def set_direction_mode0(self, vec):
         self.direction.x = vec.x - self.endeffector_pose.position.x
         self.direction.y = vec.y - self.endeffector_pose.position.y
         self.direction_yaw = np.arctan2(self.direction.y, self.direction.x)
+        self.direction_yaw_degree = self.direction_yaw * 180 / np.pi
+        self.yaw_difference = self.direction_yaw - self.cog_yaw
+        self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2)
+        rospy.loginfo("distance: %s", self.distance)
+    def set_direction_mode1(self, pose):
+        self.direction.x = pose.position.x - self.endeffector_pose.position.x
+        self.direction.y = pose.position.y - self.endeffector_pose.position.y
+        angles = oq.quaternion_to_euler(pose.orientation)
+        self.direction_yaw = angles[2]
         self.direction_yaw_degree = self.direction_yaw * 180 / np.pi
         self.yaw_difference = self.direction_yaw - self.cog_yaw
         self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2)
@@ -127,8 +157,11 @@ class Navigation():
         rospy.sleep(1.0)
         if self.state == 12:
             self.state = 0
-            self.set_cog_goal_pose(self.msg_register)
-        
+            if self.direction_mode == 0:
+                self.set_cog_goal_pose(self.msg_register)
+            elif self.direction_mode == 1:
+                self.set_cog_goal_pose(self.msg_register_pose)
+            
     #軌道の分割数決定
     def partition(self):
         n = int(self.distance // self.path_length)
@@ -171,7 +204,10 @@ class Navigation():
         self.publish_cog_waypoint()
         if self.state == 2:
             self.state = 0
-            self.set_cog_goal_pose(self.msg_register)
+            if self.direction_mode == 0:
+                self.set_cog_goal_pose(self.msg_register)
+            elif self.direction_mode == 1:
+                self.set_cog_goal_pose(self.msg_register_pose)
     #中間点の送信
     def publish_cog_waypoint(self):
         for i in range(0, self.part):
@@ -182,10 +218,11 @@ class Navigation():
 
     #コールバック:接触検知による状態の更新
     def cb_detect_contact(self, msg):
+        rospy.loginfo("contact detected")
+        #self.pub_gpio.publish()
         if self.state == 2 or self.state == 12:
             self.state = 3
 
     #状態を送信
     def cb_publish_state(self, event):
         self.pub_state.publish(self.state)
-        
