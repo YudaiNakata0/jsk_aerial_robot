@@ -9,7 +9,7 @@ from nav_msgs.msg import Odometry
 from module import operation_quaternion as oq
 
 class Navigation():
-    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1):
+    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1, m=0):
         self.interval = t
         self.d = d
         self.h = h
@@ -32,6 +32,11 @@ class Navigation():
         direction_mode
         0 : position direction
         1 : pose direction
+        """
+        self.execution_mode = m
+        """
+        0 : real machine
+        1 : simulation
         """
 
         self.msg_register = Vector3()
@@ -77,7 +82,7 @@ class Navigation():
             self.endeffector_pose.orientation = trans.transform.rotation
             self.state_pub.publish(self.endeffector_pose)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-            print("Error\n")
+            return
 
     #コールバック:重心の位置姿勢更新(in:Pose)
     def cb_get_cog_current_pose(self, msg):
@@ -155,12 +160,14 @@ class Navigation():
             return
         self.pub.publish(msg)
         rospy.sleep(1.0)
-        if self.state == 12:
+        if self.execution_mode == 0 and self.state == 12:
             self.state = 0
             if self.direction_mode == 0:
                 self.set_cog_goal_pose(self.msg_register)
             elif self.direction_mode == 1:
                 self.set_cog_goal_pose(self.msg_register_pose)
+        if self.execution_mode == 1:
+            self.state = 13
             
     #軌道の分割数決定
     def partition(self):
@@ -202,12 +209,14 @@ class Navigation():
         if self.state != 2:
             return
         self.publish_cog_waypoint()
-        if self.state == 2:
+        if self.execution_mode == 0 and self.state == 2:
             self.state = 0
             if self.direction_mode == 0:
                 self.set_cog_goal_pose(self.msg_register)
             elif self.direction_mode == 1:
                 self.set_cog_goal_pose(self.msg_register_pose)
+        if self.execution_mode == 1:
+            self.state = 3
     #中間点の送信
     def publish_cog_waypoint(self):
         for i in range(0, self.part):
