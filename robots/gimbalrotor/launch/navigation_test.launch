@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="execution_mode" default="0"/>
+  <arg name="target_mocap" default="false"/>
+  <arg name="target1_ns" default="target1"/>
+  <arg name="target2_ns" default="target2"/>
+  <arg name="target1_id" default="11"/>
+  <arg name="target2_id" default="12"/>
+
+  <!-- real experiment -->
+  <group if="$(eval execution_mode==0)">
+    <include file="$(find gimbalrotor)/launch/bringup.launch">
+      <arg name="airframe" value="beatle"/>
+    </include>
+    <group if="$(target_mocap)">
+      <group ns="$(arg target1_ns)">
+	<include file="$(find aerial_robot_base)/launch/external_module/mocap.launch">
+	  <arg name="robot_id" value="$(arg target1_id)"/>
+	</include>
+      </group>
+      <group ns="$(arg target2_ns)">
+	<include file="$(find aerial_robot_base)/launch/external_module/mocap.launch">
+	  <arg name="robot_id" value="$(arg target2_id)"/>
+	</include>
+      </group>
+    </group>
+  </group>
+
+  <!-- simulation -->
+  <group if="$(eval execution_mode==1)">
+    <include file="$(find gimbalrotor)/launch/bringup.launch">
+      <arg name="rm" value="false"/>
+      <arg name="sim" value="true"/>
+      <arg name="airframe" value="beatle"/>
+      <arg name="headless" value="false"/>
+    </include>
+  </group>
+
+  <!-- script -->
+  <node pkg="gimbalrotor" type="navigation_test.py" name="move_test_node" output="screen">
+    <param name="execution_mode" value="$(arg execution_mode)"/>
+  </node>
+</launch>
