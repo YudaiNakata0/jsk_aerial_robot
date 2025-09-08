@@ -9,13 +9,15 @@ from nav_msgs.msg import Odometry
 from module import operation_quaternion as oq
 
 class Navigation():
-    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1, m=0):
+    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1, m=0, e=0.02, v=0.1):
         self.interval = t
         self.d = d
         self.h = h
         self.path_length = l
         self.part = 1
-        self.part_attach = 3
+        self.part_attach = 5
+        self.epsilon = e
+        self.mean_velocity = v
         self.state = 0
         """
         state
@@ -50,6 +52,7 @@ class Navigation():
         self.cog_yaw = 0.0
         self.cog_start_pose =  Pose()
         self.cog_goal_pose = Pose()
+        self.cog_before_pose = Pose()
         self.goal_vector = []
 
         self.direction = Vector3()
@@ -96,12 +99,14 @@ class Navigation():
     def cb_set_cog_goal_pose_mode0(self, msg):
         self.msg_register = msg
         self.direction_mode = 0
-        self.set_cog_goal_pose(msg)
+        #self.set_cog_goal_pose(msg)
+        self.set_cog_goal_and_move(msg)
     #コールバック:重心の目標位置姿勢取得(in:Pose),トピックの記録
     def cb_set_cog_goal_pose_mode1(self, msg):
         self.msg_register_pose = msg
         self.direction_mode = 1
-        self.set_cog_goal_pose(msg)
+        #self.set_cog_goal_pose(msg)
+        self.set_cog_goal_and_move(msg)
     #重心の目標位置姿勢取得(in:Vector3)
     def set_cog_goal_pose(self, msg):
         self.cog_start_pose = self.cog_pose
@@ -136,6 +141,26 @@ class Navigation():
         self.attach()
         rospy.sleep(5.0)
         self.detach()
+    #重心の目標位置姿勢取得,移動
+    def set_cog_goal_and_move(self, msg):
+        self.cog_start_pose = self.cog_pose
+        if self.direction_mode == 0:
+            self.set_direction_mode0(msg)
+            self.calc_pose_endeffector_to_cog(msg)
+        elif self.direction_mode == 1:
+            self.set_direction_mode1(msg)
+            self.calc_pose_endeffector_to_cog(msg.position)
+
+        self.state = 2
+        duration = self.distance / self.mean_velocity
+        rospy.loginfo("duration: %s", duration)
+        self.approach(duration)
+        rospy.sleep(duration + 1.0)
+        self.state = 4
+        self.attach()
+        rospy.sleep(5.0)
+        self.detach()
+
     #目標へのベクトル,角度,距離計算(in:Vector3)
     def set_direction_mode0(self, vec):
         self.direction.x = vec.x - self.endeffector_pose.position.x
@@ -168,6 +193,10 @@ class Navigation():
         self.cog_direction.x = self.cog_goal_pose.position.x - self.cog_start_pose.position.x
         self.cog_direction.y = self.cog_goal_pose.position.y - self.cog_start_pose.position.y
         self.cog_direction.z = self.cog_goal_pose.position.z - self.cog_start_pose.position.z
+        self.cog_before_pose.position.x = self.cog_goal_pose.position.x - (self.epsilon * self.goal_vector[0])
+        self.cog_before_pose.position.y = self.cog_goal_pose.position.y - (self.epsilon * self.goal_vector[1])
+        self.cog_before_pose.position.z = self.cog_goal_pose.position.z - (self.epsilon * self.goal_vector[2])
+        self.cog_before_pose.orientation = self.cog_goal_pose.orientation
     #目標への距離が小さい場合平行移動する重心の目標位置姿勢を計算
     def simple_move(self):
         if self.state != 0:
@@ -242,19 +271,19 @@ class Navigation():
 
     #目標に接触
     def attach(self):
+        print("---------------attach----------------\n")
         part = self.part_attach
         #angles = oq.quaternion_to_euler(self.cog_goal_pose.orientation)
         #theta = angles[2]
         #vector = [np.cos(theta), np.sin(theta), 0]
         rospy.loginfo("vector: %s", self.goal_vector)
-        epsilon = 0.02
         start_pose = self.cog_pose
         self.waypoint_list.clear()
         i = 0
         for i in range(0, part):
             waypoint_pose = PoseStamped()
-            waypoint_pose.pose.position.x = start_pose.position.x + (i * epsilon * self.goal_vector[0])
-            waypoint_pose.pose.position.y = start_pose.position.y + (i * epsilon * self.goal_vector[1])
+            waypoint_pose.pose.position.x = start_pose.position.x + (i * self.epsilon * self.goal_vector[0])
+            waypoint_pose.pose.position.y = start_pose.position.y + (i * self.epsilon * self.goal_vector[1])
             waypoint_pose.pose.position.z = start_pose.position.z
             waypoint_pose.pose.orientation = start_pose.orientation
             self.waypoint_list.append(waypoint_pose)
@@ -266,16 +295,25 @@ class Navigation():
                 return
             self.pub.publish(self.waypoint_list[i])
             rospy.sleep(self.interval)
+        self.state += 1
 
     #目標から離脱
     def detach(self):
-        part = self.part_attach
-        i = 0
-        #print("-----------detach------------\n")
-        #rospy.loginfo(self.waypoint_list)
-        for i in range(0, part):
-            #rospy.loginfo("waypoint: %s", self.waypoint_list[part-1-i])
-            self.pub.publish(self.waypoint_list[part-1-i])
-            rospy.sleep(self.interval)
-        back_point = PoseStamped()
-        
+        if self.state != 5:
+            return
+        print("-----------detach------------\n")
+        msg = PoseStamped()
+        msg.header.stamp.secs = int(rospy.get_time() + 2)
+        msg.pose = self.cog_before_pose
+        self.pub.publish(msg)
+
+
+    #目標の手前に接近
+    def approach(self, duration):
+        if self.state != 2:
+            return
+        msg = PoseStamped()
+        msg.header.stamp.secs = int(rospy.get_time() + duration)
+        msg.pose = self.cog_before_pose
+        rospy.loginfo(msg)
+        self.pub.publish(msg)
