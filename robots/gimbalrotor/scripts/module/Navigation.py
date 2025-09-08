@@ -15,14 +15,17 @@ class Navigation():
         self.h = h
         self.path_length = l
         self.part = 1
+        self.part_attach = 3
         self.state = 0
         """
         state
         0 : no direction
         1 : recieved direction(long way)
         2 : moving(long way)
-        3 : completed move(long way)
-        
+        3 : completed moving(long way)
+        4 : attaching
+        5 : completed attaching
+
         11: recieved direction(short way)
         12: moving(short way)
         13: completed move(short way)
@@ -47,6 +50,7 @@ class Navigation():
         self.cog_yaw = 0.0
         self.cog_start_pose =  Pose()
         self.cog_goal_pose = Pose()
+        self.goal_vector = []
 
         self.direction = Vector3()
         self.cog_direction = Vector3()
@@ -65,8 +69,6 @@ class Navigation():
         self.sub_endeffector_goal_pose = rospy.Subscriber("/set_goal_pose", Pose, self.cb_set_cog_goal_pose_mode1)
         self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
         self.state_pub = rospy.Publisher("/end_effector/pose", Pose, queue_size=10)
-        self.timer_waypoint = rospy.Timer(rospy.Duration(0.1), self.cb_generate_cog_waypoint_list)
-        self.timer_publish = rospy.Timer(rospy.Duration(0.1), self.cb_publish_cog_waypoint)
         self.sub_contact = rospy.Subscriber("/read_sensor", String, self.cb_detect_contact)
         self.timer_state = rospy.Timer(rospy.Duration(0.1), self.cb_publish_state)
         self.pub_state = rospy.Publisher("/my_flight_state", Int8, queue_size=10)
@@ -95,6 +97,7 @@ class Navigation():
         self.msg_register = msg
         self.direction_mode = 0
         self.set_cog_goal_pose(msg)
+    #コールバック:重心の目標位置姿勢取得(in:Pose),トピックの記録
     def cb_set_cog_goal_pose_mode1(self, msg):
         self.msg_register_pose = msg
         self.direction_mode = 1
@@ -114,8 +117,25 @@ class Navigation():
                 self.calc_pose_endeffector_to_cog(msg.position)
             self.partition()
             self.state = 1
+            self.generate_cog_waypoint_list()
+            self.state = 2
+            self.publish_cog_waypoint()
+            # if self.execution_mode == 0 and self.state == 2:
+            #     self.state = 0
+            #     if self.direction_mode == 0:
+            #         self.set_cog_goal_pose(self.msg_register)
+            #     elif self.direction_mode == 1:
+            #         self.set_cog_goal_pose(self.msg_register_pose)
+            # if self.execution_mode == 1:
+            #     self.state = 3
+            # self.waypoint_list.clear()
         else:
             self.simple_move()
+        rospy.sleep(2.0)
+        self.state = 4
+        self.attach()
+        rospy.sleep(5.0)
+        self.detach()
     #目標へのベクトル,角度,距離計算(in:Vector3)
     def set_direction_mode0(self, vec):
         self.direction.x = vec.x - self.endeffector_pose.position.x
@@ -142,6 +162,9 @@ class Navigation():
         self.cog_goal_pose.position.z = self.cog_start_pose.position.z
         self.cog_goal_pose.orientation = quaternion
         rospy.loginfo(self.cog_goal_pose)
+        angles = oq.quaternion_to_euler(self.cog_goal_pose.orientation)
+        theta = angles[2]
+        self.goal_vector = [np.cos(theta), np.sin(theta), 0]
         self.cog_direction.x = self.cog_goal_pose.position.x - self.cog_start_pose.position.x
         self.cog_direction.y = self.cog_goal_pose.position.y - self.cog_start_pose.position.y
         self.cog_direction.z = self.cog_goal_pose.position.z - self.cog_start_pose.position.z
@@ -176,12 +199,6 @@ class Navigation():
             self.part = n
         rospy.loginfo("partition number: %s", self.part)
 
-    #rosタイマーコールバック:重心の経由点リストを計算
-    def cb_generate_cog_waypoint_list(self, event):
-        if self.state != 1:
-            return
-        self.generate_cog_waypoint_list()
-        self.state += 1
     #重心の経由点リストを計算
     def generate_cog_waypoint_list(self):
         if self.state != 1:
@@ -190,33 +207,20 @@ class Navigation():
         for i in range(1, self.part+1):
             waypoint = self.calc_cog_waypoint_pose(i)
             self.waypoint_list.append(waypoint)
-            rospy.loginfo("waypoint: %s", waypoint)
+            rospy.loginfo("waypoint: %s", waypoint.pose)
     #重心の経由点を計算(in:int)
     def calc_cog_waypoint_pose(self, i):
         if i > self.part:
             return
-        i = float(i) / self.part
+        ii = np.sqrt(float(i) / self.part)
         cog_waypoint_pose = PoseStamped()
-        cog_waypoint_pose.pose.position.x = self.cog_start_pose.position.x + (self.cog_direction.x * i)
-        cog_waypoint_pose.pose.position.y = self.cog_start_pose.position.y + (self.cog_direction.y * i)
+        cog_waypoint_pose.pose.position.x = self.cog_start_pose.position.x + (self.cog_direction.x * ii)
+        cog_waypoint_pose.pose.position.y = self.cog_start_pose.position.y + (self.cog_direction.y * ii)
         cog_waypoint_pose.pose.position.z = self.cog_start_pose.position.z
-        yaw_degree = (self.cog_yaw + self.yaw_difference * i) * 180 / np.pi
+        yaw_degree = (self.cog_yaw + self.yaw_difference * ii) * 180 / np.pi
         cog_waypoint_pose.pose.orientation = oq.euler_to_quaternion(np.array([0, 0, yaw_degree]))
         return cog_waypoint_pose
 
-    #rosタイマーコールバック:中間点の送信
-    def cb_publish_cog_waypoint(self, event):
-        if self.state != 2:
-            return
-        self.publish_cog_waypoint()
-        if self.execution_mode == 0 and self.state == 2:
-            self.state = 0
-            if self.direction_mode == 0:
-                self.set_cog_goal_pose(self.msg_register)
-            elif self.direction_mode == 1:
-                self.set_cog_goal_pose(self.msg_register_pose)
-        if self.execution_mode == 1:
-            self.state = 3
     #中間点の送信
     def publish_cog_waypoint(self):
         for i in range(0, self.part):
@@ -227,11 +231,51 @@ class Navigation():
 
     #コールバック:接触検知による状態の更新
     def cb_detect_contact(self, msg):
-        rospy.loginfo("contact detected")
-        #self.pub_gpio.publish()
-        if self.state == 2 or self.state == 12:
-            self.state = 3
+        if self.state == 2 or self.state == 12 or self.state == 4:
+            rospy.loginfo("contact detected")
+            self.pub_gpio.publish()
+            self.state += 1
 
     #状態を送信
     def cb_publish_state(self, event):
         self.pub_state.publish(self.state)
+
+    #目標に接触
+    def attach(self):
+        part = self.part_attach
+        #angles = oq.quaternion_to_euler(self.cog_goal_pose.orientation)
+        #theta = angles[2]
+        #vector = [np.cos(theta), np.sin(theta), 0]
+        rospy.loginfo("vector: %s", self.goal_vector)
+        epsilon = 0.02
+        start_pose = self.cog_pose
+        self.waypoint_list.clear()
+        i = 0
+        for i in range(0, part):
+            waypoint_pose = PoseStamped()
+            waypoint_pose.pose.position.x = start_pose.position.x + (i * epsilon * self.goal_vector[0])
+            waypoint_pose.pose.position.y = start_pose.position.y + (i * epsilon * self.goal_vector[1])
+            waypoint_pose.pose.position.z = start_pose.position.z
+            waypoint_pose.pose.orientation = start_pose.orientation
+            self.waypoint_list.append(waypoint_pose)
+            #rospy.loginfo("waypoint: %s", waypoint_pose.pose)
+        #print("--------------list---------------\n")
+        #rospy.loginfo(self.waypoint_list)
+        for i in range(1, part):
+            if self.state != 4:
+                return
+            self.pub.publish(self.waypoint_list[i])
+            rospy.sleep(self.interval)
+
+    #目標から離脱
+    def detach(self):
+        part = self.part_attach
+        i = 0
+        #print("-----------detach------------\n")
+        #rospy.loginfo(self.waypoint_list)
+        for i in range(0, part):
+            #rospy.loginfo("waypoint: %s", self.waypoint_list[part-1-i])
+            self.pub.publish(self.waypoint_list[part-1-i])
+            rospy.sleep(self.interval)
+        back_point = PoseStamped()
+        
