@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class ImageProcess():
     def __init__(self, input_img, file_name):
-        self.img = input_img
+        self.img = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
         self.file_name = file_name
         self.lh1 = 0
         self.lh2 = 170
@@ -18,7 +18,7 @@ class ImageProcess():
         self.uv = 255
 
     def convert_format(self):
-        self.img_hsv = cv2.cvtColor(self.img, cv2.COLOR_BGR2HSV)
+        self.img_hsv = cv2.cvtColor(self.img, cv2.COLOR_RGB2HSV)
 
     def generate_mask(self):
         lowerb_1 = (self.lh1, self.ls, self.lv)
@@ -31,7 +31,7 @@ class ImageProcess():
 
     def mask_image(self):
         masked_img = cv2.bitwise_and(self.img, self.img, mask=self.mask)
-        plt.imshow(cv2.cvtColor(masked_img, cv2.COLOR_BGR2RGB))
+        plt.imshow(masked_img)
         plt.show()
 
     def show_mask(self):
@@ -46,14 +46,17 @@ class ImageProcess():
         #lines = cv2.HoughLinesP(self.mask, rho=1, theta=np.pi/360, threshold=50, minLineLength=50, maxLineGap=5)
         #print(lines)
         edges = cv2.Canny(self.mask, 50, 150)
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=30, minLineLength=30, maxLineGap=10)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=20, minLineLength=30, maxLineGap=20)
         print(lines)
+        line_image = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2RGB)
         if lines is not None:
             for x1, y1, x2, y2 in lines[0]:
                 print(x1, y1, x2, y2)
-                cv2.line(self.mask, (x1, y1), (x2, y2), (255, 0, 0), 4)
-            plt.imshow(self.mask)
+                cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 5)
+            plt.imshow(line_image)
             plt.show()
+        new_name = "linedetected_" + self.file_name
+        cv2.imwrite(new_name, line_image)
 
 
     def draw_line(self):
@@ -73,7 +76,7 @@ if __name__ == "__main__":
     Image.convert_format()
     Image.generate_mask()
     #Image.mask_image()
-    #Image.get_line()
+    Image.get_line()
     #Image.show_mask()
-    Image.draw_line()
+    #Image.draw_line()
     Image.save_mask()
