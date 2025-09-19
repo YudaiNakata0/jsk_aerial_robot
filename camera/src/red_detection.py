@@ -10,23 +10,23 @@ class ImageProcess():
         self.file_name = file_name
         self.lh1 = 0
         self.lh2 = 170
-        self.ls = 100
-        self.lv = 100
+        self.ll = 50
+        self.ls = 50
         self.uh1 = 10
         self.uh2 = 180
+        self.ul = 255
         self.us = 255
-        self.uv = 255
 
     def convert_format(self):
-        self.img_hsv = cv2.cvtColor(self.img, cv2.COLOR_RGB2HSV)
+        self.img_hls = cv2.cvtColor(self.img, cv2.COLOR_RGB2HLS)
 
     def generate_mask(self):
-        lowerb_1 = (self.lh1, self.ls, self.lv)
-        lowerb_2 = (self.lh2, self.ls, self.lv)
-        upperb_1 = (self.uh1, self.us, self.uv)
-        upperb_2 = (self.uh2, self.us, self.uv)
-        mask_1 = cv2.inRange(self.img_hsv, lowerb_1, upperb_1)
-        mask_2 = cv2.inRange(self.img_hsv, lowerb_2, upperb_2)
+        lowerb_1 = (self.lh1, self.ll, self.ls)
+        lowerb_2 = (self.lh2, self.ll, self.ls)
+        upperb_1 = (self.uh1, self.ul, self.us)
+        upperb_2 = (self.uh2, self.ul, self.us)
+        mask_1 = cv2.inRange(self.img_hls, lowerb_1, upperb_1)
+        mask_2 = cv2.inRange(self.img_hls, lowerb_2, upperb_2)
         self.mask = mask_1 | mask_2
 
     def mask_image(self):
