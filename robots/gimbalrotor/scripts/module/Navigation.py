@@ -9,7 +9,7 @@ from nav_msgs.msg import Odometry
 from module import operation_quaternion as oq
 
 class Navigation():
-    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1, m=0, e=0.02, v=0.1):
+    def __init__(self, t=1.0, d=0.337, h=0.195, l=0.1, m=0, e=0.02, v=0.05):
         self.interval = t
         self.d = d
         self.h = h
@@ -155,7 +155,7 @@ class Navigation():
         duration = self.distance / self.mean_velocity
         rospy.loginfo("duration: %s", duration)
         self.approach(duration)
-        rospy.sleep(duration + 1.0)
+        rospy.sleep(duration + 2.0)
         self.state = 4
         self.attach()
         rospy.sleep(5.0)
