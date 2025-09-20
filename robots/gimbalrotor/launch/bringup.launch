@@ -18,7 +18,7 @@
   <arg name="spawn_z" default="0.0"/>
   <arg name="spawn_yaw" default="0.0"/>
   <arg name="config_dir" default="$(find gimbalrotor)/config"/>
-  <arg name="robot_id" default="10" />
+  <arg name="robot_id" default="" />
   <arg name="robot_ns" value="gimbalrotor$(arg robot_id)" />
   <arg name="airframe" default="quad" />
 
@@ -82,7 +82,7 @@
     <arg name="real_machine" value="$(arg real_machine)" />
     <arg name="simulation" value="$(arg simulation)" />
     <arg name="robot_ns" value="$(arg robot_ns)" />
-    <arg name="robot_id" value="$(arg robot_id)"/>
+    <arg name="robot_id" value="10"/>
   </include >
 
   ###########  Servo Bridge  ###########
