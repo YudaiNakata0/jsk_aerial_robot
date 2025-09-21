@@ -27,4 +27,5 @@
     <param name="minLineLength" value="$(arg minLineLength)"/>
     <param name="maxLineGap" value="$(arg maxLineGap)"/>
   </node>
+  <node pkg="camera" type="test_line.py" name="line_detection_node" output="screen"/>
 </launch>
