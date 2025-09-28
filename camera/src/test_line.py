@@ -4,6 +4,7 @@ from cv_bridge import CvBridge
 import rospy
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 from sensor_msgs.msg import Image
 
 class LineDetection():
@@ -19,10 +20,9 @@ class LineDetection():
         self.count_list = []
         self.points_on_line = 0
         self.sub = rospy.Subscriber("/processed_image/mask", Image, self.callback)
-        self.plt.ion()
-        self.fig, self.ax = self.plt.subplots()
-        self.hist, self.bins, self.patches = self.ax.hist(self.count_list, bins=30, alpha=0.7)
-
+        self.fig, self.ax = plt.subplots()
+        self.ani = animation.FuncAnimation(self.fig, self.update, interval=100)
+        
     def get_image(self, image):
         self.image = image
         #print(image)
@@ -50,9 +50,6 @@ class LineDetection():
                 division = int(theta // self.delta)
                 self.polar_points.append([r, theta, division])
                 self.count_list[division] += 1
-        self.ax.cla()
-        self.ax.hist(self.count_list, bins=30, alpha=0.7)
-        self.ax.set_title("")
 
     def choose_line(self):
         max_index = np.argmax(self.count_list)
@@ -89,7 +86,25 @@ class LineDetection():
         self.choose_line()
         self.draw_line()
 
+    def callback_graph(self, event):
+        self.ax.cla()
+        self.ax.hist(self.count_list, bins=30, alpha=0.7)
+        self.ax.title("red points")
+        plt.pause(0.1)
+
+    def update(self, frame):
+        self.ax.cla()
+        self.ax.plot(range(len(self.count_list)), self.count_list, marker="o")
+        #self.ax.hist(self.count_list, bins=30, alpha=0.7)
+        self.ax.set_title("red points")
+        self.ax.set_xlabel("argument")
+        self.ax.set_ylabel("number of points")
+
+    def draw_graph(self):
+        plt.show()
+        
 if __name__ == "__main__":
     rospy.init_node("line_detection_node")
-    LineDetection(delta=5, cx=200, cy=300)
-    rospy.spin()
+    Class = LineDetection(delta=5, cx=200, cy=300)
+    #rospy.spin()
+    Class.draw_graph()
