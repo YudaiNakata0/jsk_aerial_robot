@@ -19,6 +19,9 @@ class LineDetection():
         self.count_list = []
         self.points_on_line = 0
         self.sub = rospy.Subscriber("/processed_image/mask", Image, self.callback)
+        self.plt.ion()
+        self.fig, self.ax = self.plt.subplots()
+        self.hist, self.bins, self.patches = self.ax.hist(self.count_list, bins=30, alpha=0.7)
 
     def get_image(self, image):
         self.image = image
@@ -36,17 +39,20 @@ class LineDetection():
 
     def cartesian_to_polar(self):
         self.polar_points = []
-        num_region = int(180 // self.delta)
-        self.count_list = [0]*num_region
+        num_division = int(180 // self.delta)
+        self.count_list = [0]*num_division
         for point in self.points:
             x = point[0] - self.cx
             y = self.cy - point[1]
             if y > 0:
                 r = np.sqrt(x**2 + y**2)
                 theta = np.arctan2(y, x) * 180 / np.pi
-                region = int(theta // self.delta)
-                self.polar_points.append([r, theta, region])
-                self.count_list[region] += 1
+                division = int(theta // self.delta)
+                self.polar_points.append([r, theta, division])
+                self.count_list[division] += 1
+        self.ax.cla()
+        self.ax.hist(self.count_list, bins=30, alpha=0.7)
+        self.ax.set_title("")
 
     def choose_line(self):
         max_index = np.argmax(self.count_list)
