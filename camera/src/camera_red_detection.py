@@ -140,7 +140,7 @@ class ImageProcess():
         self.convert_format()
         self.generate_mask()
         self.show_mask()
-        self.get_line()
+        #self.get_line()
         #self.get_line_lsd()
         
 if __name__ == "__main__":

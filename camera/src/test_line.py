@@ -8,19 +8,23 @@ import matplotlib.animation as animation
 from sensor_msgs.msg import Image
 
 class LineDetection():
-    def __init__(self, delta=10, cx=0, cy=0):
+    def __init__(self, delta=10, delta_r=10, cx=0, cy=0):
         self.bridge = CvBridge()
         self.image = Image()
         self.cv_image = []
         self.mono = []
         self.delta = delta
+        self.delta_r = delta_r 
         self.cx = cx
         self.cy = cy
         self.polar_points = []
         self.count_list = []
+        self.distribution_r = []
+        self.max_index = 0
+        self.max_r = 0
         self.points_on_line = 0
         self.sub = rospy.Subscriber("/processed_image/mask", Image, self.callback)
-        self.fig, self.ax = plt.subplots()
+        self.fig, (self.ax1, self.ax2) = plt.subplots(1, 2)
         self.ani = animation.FuncAnimation(self.fig, self.update, interval=100)
         
     def get_image(self, image):
@@ -52,10 +56,18 @@ class LineDetection():
                 self.count_list[division] += 1
 
     def choose_line(self):
-        max_index = np.argmax(self.count_list)
-        self.points_on_line = self.count_list[max_index]
-        arg = np.radians(self.delta*(max_index + 0.5))
+        self.max_index = np.argmax(self.count_list)
+        self.points_on_line = self.count_list[self.max_index]
+        arg = np.radians(self.delta*(self.max_index + 0.5))
         self.slope = np.tan(arg)
+
+    def distribute_radius(self):
+        num_division = int(500 // self.delta_r)
+        self.distribution_r = [0]*num_division
+        for point in self.polar_points:
+            if point[2] == self.max_index:
+                division_r = int(point[0] // self.delta_r)
+                self.distribution_r[division_r] += 1
 
     def draw_line(self):
         image = cv2.cvtColor(self.mono, cv2.COLOR_GRAY2RGB)
@@ -84,27 +96,44 @@ class LineDetection():
         self.get_points()
         self.cartesian_to_polar()
         self.choose_line()
+        self.distribute_radius()
         self.draw_line()
 
-    def callback_graph(self, event):
-        self.ax.cla()
-        self.ax.hist(self.count_list, bins=30, alpha=0.7)
-        self.ax.title("red points")
-        plt.pause(0.1)
-
     def update(self, frame):
-        self.ax.cla()
-        self.ax.plot(range(len(self.count_list)), self.count_list, marker="o")
+        self.ax1.cla()
+        self.ax1.plot(range(len(self.count_list)), self.count_list, marker="o")
         #self.ax.hist(self.count_list, bins=30, alpha=0.7)
-        self.ax.set_title("red points")
-        self.ax.set_xlabel("argument")
-        self.ax.set_ylabel("number of points")
+        self.ax1.set_title("red points(angle)")
+        self.ax1.set_xlabel("argument")
+        self.ax1.set_ylabel("number of points")
+        xticks_1 = range(0, len(self.count_list)+1, 2)
+        xtick_labels_1 = [x * self.delta for x in xticks_1]
+        self.ax1.set_xticks(xticks_1)
+        self.ax1.set_xticklabels(xtick_labels_1)
+        self.ax1.set_ylim(-50, 1000)
+
+        self.ax2.cla()
+        self.ax2.plot(range(len(self.distribution_r)), self.distribution_r, marker="o")
+        self.ax2.set_title("red points on the line(radius)")
+        self.ax2.set_xlabel("radius")
+        self.ax2.set_ylabel("number of points")
+        xticks_2 = range(0, len(self.distribution_r)+1, 5)
+        xtick_labels_2 = [x * self.delta_r for x in xticks_2]
+        self.ax2.set_xticks(xticks_2)
+        self.ax2.set_xticklabels(xtick_labels_2)
+        #self.ax2.set_xlim(-5, 55)
+        self.ax2.set_ylim(-10, 300)
 
     def draw_graph(self):
         plt.show()
+
+    def cleanup(self):
+        plt.close("all")
         
 if __name__ == "__main__":
     rospy.init_node("line_detection_node")
-    Class = LineDetection(delta=5, cx=200, cy=300)
+    Class = LineDetection(delta=5, delta_r=20, cx=200, cy=300)
+    rospy.on_shutdown(Class.cleanup)
+    #Class.draw_graph()
+    plt.show()
     #rospy.spin()
-    Class.draw_graph()
