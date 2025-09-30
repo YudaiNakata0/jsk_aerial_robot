@@ -70,8 +70,8 @@ class Navigation():
         self.sub_cog_current_pose = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_get_cog_current_pose)
         self.sub_endeffector_goal_position = rospy.Subscriber("/set_goal", Vector3, self.cb_set_cog_goal_pose_mode0)
         self.sub_endeffector_goal_pose = rospy.Subscriber("/set_goal_pose", Pose, self.cb_set_cog_goal_pose_mode1)
-        self.pub = rospy.Publisher("/move_base_simple/goal", PoseStamped, queue_size=10)
-        self.state_pub = rospy.Publisher("/end_effector/pose", Pose, queue_size=10)
+        self.pub = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=10)
+        self.pub_endeffector = rospy.Publisher("/end_effector/pose", Pose, queue_size=10)
         self.sub_contact = rospy.Subscriber("/read_sensor", String, self.cb_detect_contact)
         self.timer_state = rospy.Timer(rospy.Duration(0.1), self.cb_publish_state)
         self.pub_state = rospy.Publisher("/my_flight_state", Int8, queue_size=10)
@@ -85,7 +85,7 @@ class Navigation():
             trans = self.tfBuffer.lookup_transform("world", "gimbalrotor/end_effector", rospy.Time(0))
             self.endeffector_pose.position = trans.transform.translation
             self.endeffector_pose.orientation = trans.transform.rotation
-            self.state_pub.publish(self.endeffector_pose)
+            self.pub_endeffector.publish(self.endeffector_pose)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             return
 
@@ -165,26 +165,31 @@ class Navigation():
     def set_direction_mode0(self, vec):
         self.direction.x = vec.x - self.endeffector_pose.position.x
         self.direction.y = vec.y - self.endeffector_pose.position.y
+        self.direction.z = vec.z - self.endeffector_pose.position.z
         self.direction_yaw = np.arctan2(self.direction.y, self.direction.x)
         self.direction_yaw_degree = self.direction_yaw * 180 / np.pi
         self.yaw_difference = self.direction_yaw - self.cog_yaw
-        self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2)
+        self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2 + self.direction.z ** 2)
         rospy.loginfo("distance: %s", self.distance)
     def set_direction_mode1(self, pose):
         self.direction.x = pose.position.x - self.endeffector_pose.position.x
         self.direction.y = pose.position.y - self.endeffector_pose.position.y
+        self.direction.z = pose.position.z - self.endeffector_pose.position.z
         angles = oq.quaternion_to_euler(pose.orientation)
         self.direction_yaw = angles[2]
         self.direction_yaw_degree = self.direction_yaw * 180 / np.pi
         self.yaw_difference = self.direction_yaw - self.cog_yaw
-        self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2)
+        self.distance = np.sqrt(self.direction.x ** 2 + self.direction.y ** 2 + self.direction.z ** 2)
         rospy.loginfo("distance: %s", self.distance)
     #エンドエフェクタの目標位置から重心の目標位置姿勢を計算(in:Vector3)
     def calc_pose_endeffector_to_cog(self, msg):
         quaternion = oq.euler_to_quaternion(np.array([0, 0, self.direction_yaw_degree]))
         self.cog_goal_pose.position.x = msg.x - (self.d * np.cos(self.direction_yaw))
         self.cog_goal_pose.position.y = msg.y - (self.d * np.sin(self.direction_yaw))
-        self.cog_goal_pose.position.z = self.cog_start_pose.position.z
+        if msg.z > 0.5:
+            self.cog_goal_pose.position.z = msg.z - self.h
+        else:
+            self.cog_goal_pose.position.z = self.cog_start_pose.position.z
         self.cog_goal_pose.orientation = quaternion
         rospy.loginfo(self.cog_goal_pose)
         angles = oq.quaternion_to_euler(self.cog_goal_pose.orientation)
