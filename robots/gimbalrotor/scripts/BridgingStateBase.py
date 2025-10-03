@@ -15,6 +15,9 @@ class WaitState(BridgingStateBase):
     def __init__(self, ref):
         super().__init__(ref)
         self.subscriber_goal = rospy.Subscriber("/set_goal_pose", Pose, self.cb_goal)
+
+    def on_exit(self):
+        self.subscriber_goal.unregister()
         
     def handle_event(self, msg):
         self.ref.goal_pose = msg
