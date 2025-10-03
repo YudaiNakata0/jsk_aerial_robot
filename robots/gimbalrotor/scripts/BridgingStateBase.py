@@ -1,10 +1,15 @@
 #!/use/bin/env python3
 import rospy
-from geometry_msgs.msg import Pose, PoseStamped
+from geometry_msgs.msg import Vector3, Pose, PoseStamped
+from module import operation_quaternion as oq
+from module import operation_vector3 as ov
 
 class BridgingStateBase():
-    def __init__(self, ref):
+    def __init__(self, ref, d=0.337, h=0.195, v=0.1):
         self.ref = ref
+        self.l_xy = d
+        self.l_z = h
+        self.mean_velocity = v
 
     def on_enter(self): pass
     def on_exit(self): pass
@@ -27,15 +32,17 @@ class WaitState(BridgingStateBase):
         self.handle_event(msg)
 
 class MoveState(BridgingStateBase):
-    def __init__(self, ref, goal_pose):
+    def __init__(self, ref, endeffector_goal_pose):
         super().__init__(ref)
-        self.goal_pose = goal_pose
+        self.direction = Vector3()
+        self.direction_yaw = 0.0
+        self.distance = 0.0
+        self.endeffector_goal_pose = endeffector_goal_pose
     
     def on_enter(self):
-        msg = PoseStamped()
-        msg.pose = self.goal_pose
+        self.calculate_direction()
+        msg = self.generate_message()
         self.ref.publisher_goal.publish(msg)
-        pass
 
     def on_exit(self):
         pass
@@ -43,6 +50,16 @@ class MoveState(BridgingStateBase):
     def handle_event(self):
         pass
 
+    def calculate_direction(self):
+        self.direction.x = ov.get_difference(self.endeffector_goal_pose.position, self.ref.endeffector_pose.position)
+        angles = oq.quaternion_to_euler(self.endeffector_goal_pose.orientation)
+        self.direction_yaw = angles[2]
+        self.distance = ov.get_norm(self.direction)
+    
+    def generate_message(self):
+        msg = PoseStamped()
+        msg.pose = self.calculate_pose_endeffector_to_cog()
+        duration = self.distance / self.mean_velocity
         
 class AttachState(BridgingStateBase):
     def on_enter(self):

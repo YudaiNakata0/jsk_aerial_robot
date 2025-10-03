@@ -40,6 +40,7 @@ class BridgingClass():
         self.listener = tf2_ros.TransformListener(self.tfBuffer)
         self.timer_endeffector_pose = rospy.Timer(rospy.Duration(0.1), self.cb_get_endeffector_pose)
         self.publisher_goal = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
+        self.publisher_endeffector_pose = rospy.Publisher("/gimbalrotor/endeffector_pose", Pose, queue_size=1)
         self.publisher_state = rospy.Publisher("/bridging_state", Int8, queue_size=1)
         self.timer_state = rospy.Timer(rospy.Duration(0.1), self.cb_publish_state)
 
@@ -52,14 +53,14 @@ class BridgingClass():
         angles = oq.quaternion_to_euler(self.cog_pose.orientation)
         self.cog_yaw = angles[2]
 
-    def cb_update_endeffector_pose(self, event):
-        self.get_endeffector_current_pose()
-    def get_endeffector_current_pose(self):
+    def cb_get_endeffector_pose(self, event):
+        self.get_endeffector_pose()
+    def get_endeffector_pose(self):
         try:
             trans = self.tfBuffer.lookup_transform("world", "gimbalrotor/end_effector", rospy.Time(0))
             self.endeffector_pose.position = trans.transform.translation
             self.endeffector_pose.orientation = trans.transform.rotation
-            self.pub_endeffector.publish(self.endeffector_pose)
+            self.publisher_endeffector_pose.publish(self.endeffector_pose)
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             return
 
