@@ -22,6 +22,7 @@ import math
 import time
 import rospy
 from spinal.msg import ServoControlCmd  # Message type: index: int32[], angles: int32[]
+from sensor_msgs.msg import JointState
 
 
 def parse_indices(s):
@@ -38,12 +39,12 @@ def main():
     # ---- Parameters ----
     indices_str = rospy.get_param("~indices", "0,1,2,3")
     indices = parse_indices(indices_str)
-    topic = rospy.get_param("~topic", "/servo/target_states")
+    topic = rospy.get_param("~topic", "/gimbalrotor/gimbals_ctrl")
     rate_hz = float(rospy.get_param("~rate", 50))
     period = float(rospy.get_param("~period", 12.0))  # seconds for a full cycle
-    phase_deg = float(rospy.get_param("~phase_deg", 45))  # per-servo phase offset (degrees)
-    vmin = int(rospy.get_param("~min", 0))
-    vmax = int(rospy.get_param("~max", 4096))
+    phase_deg = float(rospy.get_param("~phase_deg", 0))  # per-servo phase offset (degrees)
+    vmin = rospy.get_param("~min", -0.79)
+    vmax = rospy.get_param("~max", 0.79)
 
     # ---- Waveform setup ----
     # Angle(t) = base - amp * sin(omega * t + phi_i)
@@ -56,7 +57,7 @@ def main():
     phase_step = math.radians(phase_deg)
     phases = [i * phase_step for i in range(len(indices))]
 
-    pub = rospy.Publisher(topic, ServoControlCmd, queue_size=10)
+    pub = rospy.Publisher("/gimbalrotor/gimbals_ctrl", JointState, queue_size=10)
     rate = rospy.Rate(rate_hz)
 
     rospy.loginfo("Starting phase-shifted servo publisher:")
@@ -75,12 +76,12 @@ def main():
         angles = []
         for phi in phases:
             val = base - amp * math.sin(omega * t + phi)  # go down first
-            val = int(round(clamp(val, vmin, vmax)))
+            val = clamp(val, vmin, vmax)
             angles.append(val)
 
-        msg = ServoControlCmd()
-        msg.index = indices
-        msg.angles = angles
+        msg = JointState()
+        # msg.index = indices
+        msg.position = angles
 
         pub.publish(msg)
         rate.sleep()
