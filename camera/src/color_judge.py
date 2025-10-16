@@ -9,14 +9,11 @@ class ColorJudge():
     def __init__(self,rlh1,rlh2,ruh1,ruh2,rll,rul,rls,rus,blh,buh,bll,bul,bls,bus):
         self.time = rospy.get_time()
         self.bridge = CvBridge()
-        self.sub_raw = rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, self.callback)
-        self.pub_cut = rospy.Publisher("/processed_image/cut", Image, queue_size=1)
-        self.pub_red_mask = rospy.Publisher("/processed_image/red_mask", Image, queue_size=1)
-        self.pub_blue_mask = rospy.Publisher("/processed_image/blue_mask", Image, queue_size=1)
-        self.pub_blue_mask_cleaned = rospy.Publisher("/processed_image/blue_mask_cleaned", Image, queue_size=1)
 
         self.setup_hls_param_for_red(rlh1, rlh2, ruh1, ruh2, rll, rul, rls, rus)
         self.setup_hls_param_for_blue(blh, buh, bll, bul, bls, bus)
+
+        self.setup_ros()
 
     def setup_hls_param_for_red(self, rlh1, rlh2, ruh1, ruh2, rll, rul, rls, rus):
         self.rlh1 = rlh1
@@ -35,6 +32,13 @@ class ColorJudge():
         self.bul = bul
         self.bls = bls
         self.bus = bus
+
+    def setup_ros(self):
+        self.sub_raw = rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, self.callback)
+        self.pub_cut = rospy.Publisher("/processed_image/cut", Image, queue_size=1)
+        self.pub_red_mask = rospy.Publisher("/processed_image/red_mask", Image, queue_size=1)
+        self.pub_blue_mask = rospy.Publisher("/processed_image/blue_mask", Image, queue_size=1)
+        self.pub_blue_mask_cleaned = rospy.Publisher("/processed_image/blue_mask_cleaned", Image, queue_size=1)
 
     def get_image(self, image):
         array = np.frombuffer(image.data, dtype=np.uint8)
