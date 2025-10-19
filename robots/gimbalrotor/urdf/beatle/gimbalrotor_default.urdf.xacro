@@ -92,69 +92,69 @@
     </joint>
 
     ## battery
-    <link name="battery1">
-      <inertial>
-	<origin xyz="0.00000000 0.00000000 -0.01900000" rpy="0 0 0"/>
-	<mass value="0.44600000"/>
-        <inertia
-          ixx="0.00028315"
-          ixy="0.00000000"
-          ixz="0.00000000"
-          iyy="0.00083239"
-          iyz="0.00000000"
-          izz="0.00068918"/>
-      </inertial>
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://gimbalrotor/urdf/beatle/mesh/battery.STL"/>
-        </geometry>
-      </visual>
-      <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <box size="0.130 0.044 0.038"/>
-        </geometry>
-      </collision>
-    </link>
-    <joint name="base_battery1" type="fixed">
-      <parent link="base_link"/>
-      <child link="battery1"/>
-      <origin rpy="0 0 0" xyz="0 0.045 -0.008"/>
-      <axis xyz="0 0 1"/>
-    </joint>
+    <!-- <link name="battery1"> -->
+    <!--   <inertial> -->
+    <!-- 	<origin xyz="0.00000000 0.00000000 -0.01900000" rpy="0 0 0"/> -->
+    <!-- 	<mass value="0.44600000"/> -->
+    <!--     <inertia -->
+    <!--       ixx="0.00028315" -->
+    <!--       ixy="0.00000000" -->
+    <!--       ixz="0.00000000" -->
+    <!--       iyy="0.00083239" -->
+    <!--       iyz="0.00000000" -->
+    <!--       izz="0.00068918"/> -->
+    <!--   </inertial> -->
+    <!--   <visual> -->
+    <!--     <origin xyz="0 0 0" rpy="0 0 0"/> -->
+    <!--     <geometry> -->
+    <!--       <mesh filename="package://gimbalrotor/urdf/beatle/mesh/battery.STL"/> -->
+    <!--     </geometry> -->
+    <!--   </visual> -->
+    <!--   <collision> -->
+    <!--     <origin xyz="0 0 0" rpy="0 0 0"/> -->
+    <!--     <geometry> -->
+    <!--       <box size="0.130 0.044 0.038"/> -->
+    <!--     </geometry> -->
+    <!--   </collision> -->
+    <!-- </link> -->
+    <!-- <joint name="base_battery1" type="fixed"> -->
+    <!--   <parent link="base_link"/> -->
+    <!--   <child link="battery1"/> -->
+    <!--   <origin rpy="0 0 0" xyz="0 0.045 -0.008"/> -->
+    <!--   <axis xyz="0 0 1"/> -->
+    <!-- </joint> -->
 
-    <link name="battery2">
-      <inertial>
-	<origin xyz="0.00000000 0.00000000 -0.01900000" rpy="0 0 0"/>
-	<mass value="0.44600000"/>
-        <inertia
-          ixx="0.00028315"
-          ixy="0.00000000"
-          ixz="0.00000000"
-          iyy="0.00083239"
-          iyz="0.00000000"
-          izz="0.00068918"/>
-      </inertial>
-      <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <mesh filename="package://gimbalrotor/urdf/beatle/mesh/battery.STL"/>
-        </geometry>
-      </visual>
-      <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
-        <geometry>
-          <box size="0.130 0.044 0.038"/>
-        </geometry>
-      </collision>
-    </link>
-    <joint name="base_battery2" type="fixed">
-      <parent link="base_link"/>
-      <child link="battery2"/>
-      <origin rpy="0 0 0" xyz="0 -0.045 -0.008"/>
-      <axis xyz="0 0 1"/>
-    </joint>    
+    <!-- <link name="battery2"> -->
+    <!--   <inertial> -->
+    <!-- 	<origin xyz="0.00000000 0.00000000 -0.01900000" rpy="0 0 0"/> -->
+    <!-- 	<mass value="0.44600000"/> -->
+    <!--     <inertia -->
+    <!--       ixx="0.00028315" -->
+    <!--       ixy="0.00000000" -->
+    <!--       ixz="0.00000000" -->
+    <!--       iyy="0.00083239" -->
+    <!--       iyz="0.00000000" -->
+    <!--       izz="0.00068918"/> -->
+    <!--   </inertial> -->
+    <!--   <visual> -->
+    <!--     <origin xyz="0 0 0" rpy="0 0 0"/> -->
+    <!--     <geometry> -->
+    <!--       <mesh filename="package://gimbalrotor/urdf/beatle/mesh/battery.STL"/> -->
+    <!--     </geometry> -->
+    <!--   </visual> -->
+    <!--   <collision> -->
+    <!--     <origin xyz="0 0 0" rpy="0 0 0"/> -->
+    <!--     <geometry> -->
+    <!--       <box size="0.130 0.044 0.038"/> -->
+    <!--     </geometry> -->
+    <!--   </collision> -->
+    <!-- </link> -->
+    <!-- <joint name="base_battery2" type="fixed"> -->
+    <!--   <parent link="base_link"/> -->
+    <!--   <child link="battery2"/> -->
+    <!--   <origin rpy="0 0 0" xyz="0 -0.045 -0.008"/> -->
+    <!--   <axis xyz="0 0 1"/> -->
+    <!-- </joint>     -->
 
     ## rotor arms
     <link name="rotor_arm${child1}">
