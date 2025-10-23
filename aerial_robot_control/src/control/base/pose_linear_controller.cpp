@@ -182,8 +182,7 @@ namespace aerial_robot_control
     pid_pub_ = nh_.advertise<aerial_robot_msgs::PoseControlPid>("debug/pose/pid", 10);
 
     /* external wrench estimation*/
-    getParam<bool>(control_nh, "wrench_estimate_flag", wrench_estimate_flag_, true);
-    if(wrench_estimate_flag_) startWrenchEstimation();
+    startWrenchEstimation();
   }
 
   void PoseLinearController::reset()

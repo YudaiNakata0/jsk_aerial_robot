@@ -108,7 +108,6 @@ namespace aerial_robot_control
     Eigen::MatrixXd momentum_observer_matrix_;
     Eigen::VectorXd integrate_term_;
     double prev_est_wrench_timestamp_;
-    bool wrench_estimate_flag_;
     Eigen::VectorXd target_wrench_acc_cog_;
 
 
