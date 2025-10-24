@@ -67,6 +67,7 @@ void GimbalrotorController::rosParamInit()
   getParam<bool>(control_nh, "hovering_approximate", hovering_approximate_, false);
   getParam<bool>(control_nh, "underactuate", underactuate_, false);
   //  for wrench comp
+  getParam<string>(control_nh, "end_frame", end_frame_, "root");
   getParam<double>(control_nh, "wrench_diff_gain", wrench_diff_gain_, 1.0);
   getParam<bool>(control_nh, "send_feedforward_switch_flag", send_feedforward_switch_flag_, false);
   getParam<double>(control_nh, "acc_shock_thres", acc_shock_thres_, 20.0);
@@ -292,7 +293,7 @@ void GimbalrotorController::sendCmd()
   if (gimbal_calc_in_fc_)
   {
     sendTorqueAllocationMatrixInv();
-  }
+ }
   else
   {
     sensor_msgs::JointState gimbal_control_msg;
@@ -399,12 +400,17 @@ void GimbalrotorController::setAttitudeGains()
 
 void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped msg)
 {
-  desire_wrench_[0] = msg.wrench.force.x;
-  desire_wrench_[1] = msg.wrench.force.y;
-  desire_wrench_[2] = msg.wrench.force.z;
-  desire_wrench_[3] = msg.wrench.torque.x;
-  desire_wrench_[4] = msg.wrench.torque.y;
-  desire_wrench_[5] = msg.wrench.torque.z;
+  Eigen::VectorXd desire_force_at_end;
+  desire_force_at_end[0] = msg.wrench.force.x;
+  desire_force_at_end[1] = msg.wrench.force.y;
+  desire_force_at_end[2] = msg.wrench.force.z;
+  desire_force_at_end[3] = msg.wrench.torque.x;
+  desire_force_at_end[4] = msg.wrench.torque.y;
+  desire_force_at_end[5] = msg.wrench.torque.z;
+
+  Eigen::MatrixXd adjoint_end_to_cog =
+      gimbalrotor_robot_model_->getDualAdjointMatrix(end_frame_, "cog");
+  desire_wrench_ = adjoint_end_to_cog * desire_force_at_end;
 }
 
 void GimbalrotorController::ExtWrenchControl(){

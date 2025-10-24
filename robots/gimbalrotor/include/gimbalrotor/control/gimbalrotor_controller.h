@@ -73,6 +73,7 @@ private:
   double acc_shock_thres_;
   double x_p_gain_, y_p_gain_;
   IirFilter lpf_est_external_wrench_;
+  string end_frame_;
 
   void rosParamInit();
   bool update() override;
