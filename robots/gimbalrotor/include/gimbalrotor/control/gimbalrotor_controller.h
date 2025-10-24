@@ -35,7 +35,7 @@ private:
   ros::Publisher gimbal_dof_pub_;                    // for spinal
   ros::Publisher feedforward_acc_cog_pub_;
   ros::Publisher feedforward_ang_acc_cog_pub_;
-  ros::Publisher des_wrench_cog_pub_;
+  ros::Publisher wrench_error_cog_pub_;
   ros::Publisher attaching_flag_pub_;
   ros::Publisher filtered_est_external_wrench_pub_;  // for wrenchcomp
   ros::Subscriber desire_wrench_sub_;                // for wrenchcomp

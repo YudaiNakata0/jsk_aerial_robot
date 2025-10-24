@@ -30,13 +30,12 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   gimbal_state_pub_ = nh_.advertise<sensor_msgs::JointState>("joint_states", 1);
   target_vectoring_force_pub_ = nh_.advertise<std_msgs::Float32MultiArray>("debug/target_vectoring_force", 1);
   rpy_gain_pub_ = nh_.advertise<spinal::RollPitchYawTerms>("rpy/gain", 1);
-  torque_allocation_matrix_inv_pub_ =
-    nh_.advertise<spinal::TorqueAllocationMatrixInv>("torque_allocation_matrix_inv", 1);
+  torque_allocation_matrix_inv_pub_ = nh_.advertise<spinal::TorqueAllocationMatrixInv>("torque_allocation_matrix_inv", 1);
   gimbal_dof_pub_ = nh_.advertise<std_msgs::UInt8>("gimbal_dof", 1);
   //  for wrench comp
   feedforward_acc_cog_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("feedforward_acc_world", 1);
   feedforward_ang_acc_cog_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("feedforward_ang_acc_cog", 1);
-  des_wrench_cog_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("des_wrench_cog", 1);
+  wrench_error_cog_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("wrench_error_cog", 1);
   attaching_flag_pub_ = nh_.advertise<std_msgs::Bool>("attaching_flag",1);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
@@ -69,7 +68,7 @@ void GimbalrotorController::rosParamInit()
   //  for wrench comp
   getParam<string>(control_nh, "end_frame", end_frame_, "root");
   getParam<double>(control_nh, "wrench_diff_gain", wrench_diff_gain_, 1.0);
-  getParam<bool>(control_nh, "send_feedforward_switch_flag", send_feedforward_switch_flag_, false);
+  getParam<bool>(control_nh, "send_feedforward_switch_flag", send_feedforward_switch_flag_, true);
   getParam<double>(control_nh, "acc_shock_thres", acc_shock_thres_, 20.0);
   double cutoff_freq, sample_freq;
   getParam<double>(control_nh, "cutoff_freq", cutoff_freq, 25.0);
@@ -445,12 +444,12 @@ void GimbalrotorController::ExtWrenchControl(){
   Eigen::Matrix3d cog_rot;
   tf::matrixTFToEigen(estimator_->getOrientation(Frame::COG, estimate_mode_), cog_rot);
 
-  Eigen::Vector3d target_force, target_torque;
-  target_force = desire_wrench_.head(3) + cog_rot.inverse() * filtered_est_external_wrench.head(3);
-  target_torque = desire_wrench_.tail(3) + cog_rot.inverse() * filtered_est_external_wrench.tail(3);
+  Eigen::Vector3d force_error, torque_error;
+  force_error = desire_wrench_.head(3) + cog_rot.inverse() * filtered_est_external_wrench.head(3);
+  torque_error = desire_wrench_.tail(3) + cog_rot.inverse() * filtered_est_external_wrench.tail(3);
 
-  Eigen::Vector3d target_acc = mass_inv * target_force;
-  Eigen::Vector3d target_ang_acc = inertia_inv * target_torque;
+  Eigen::Vector3d target_acc = mass_inv * force_error;
+  Eigen::Vector3d target_ang_acc = inertia_inv * torque_error;
   Eigen::Vector3d feedforward_acc = cog_rot * (target_acc + feedforward_sum_.head(3));
   Eigen::Vector3d feedforward_ang_acc = cog_rot * (target_ang_acc + feedforward_sum_.tail(3));
   
@@ -512,20 +511,20 @@ void GimbalrotorController::ExtWrenchControl(){
   }
   geometry_msgs::Vector3Stamped feedforward_acc_cog_msg;
   geometry_msgs::Vector3Stamped feedforward_ang_acc_cog_msg;
-  geometry_msgs::WrenchStamped des_wrench_cog_msg;
+  geometry_msgs::WrenchStamped wrench_error_cog_msg;
   geometry_msgs::WrenchStamped filtered_est_external_wrench_msg;
   feedforward_acc_cog_msg.vector.x = feedforward_acc[0];
   feedforward_acc_cog_msg.vector.y = feedforward_acc[1];
   feedforward_acc_cog_msg.vector.z = feedforward_acc[2];
-  feedforward_ang_acc_cog_msg.vector.x = feedforward_sum_[3];
-  feedforward_ang_acc_cog_msg.vector.y = feedforward_sum_[4];
-  feedforward_ang_acc_cog_msg.vector.z = feedforward_sum_[5];
-  des_wrench_cog_msg.wrench.force.x = target_force[0];
-  des_wrench_cog_msg.wrench.force.y = target_force[1];
-  des_wrench_cog_msg.wrench.force.z = target_force[2];
-  des_wrench_cog_msg.wrench.torque.x = target_torque[0];
-  des_wrench_cog_msg.wrench.torque.y = target_torque[1];
-  des_wrench_cog_msg.wrench.torque.z = target_torque[2];
+  feedforward_ang_acc_cog_msg.vector.x = feedforward_ang_acc[3];
+  feedforward_ang_acc_cog_msg.vector.y = feedforward_ang_acc[4];
+  feedforward_ang_acc_cog_msg.vector.z = feedforward_ang_acc[5];
+  wrench_error_cog_msg.wrench.force.x = force_error[0];
+  wrench_error_cog_msg.wrench.force.y = force_error[1];
+  wrench_error_cog_msg.wrench.force.z = force_error[2];
+  wrench_error_cog_msg.wrench.torque.x = torque_error[0];
+  wrench_error_cog_msg.wrench.torque.y = torque_error[1];
+  wrench_error_cog_msg.wrench.torque.z = torque_error[2];
   filtered_est_external_wrench_msg.wrench.force.x = filtered_est_external_wrench[0];
   filtered_est_external_wrench_msg.wrench.force.y = filtered_est_external_wrench[1];
   filtered_est_external_wrench_msg.wrench.force.z = filtered_est_external_wrench[2];
@@ -535,7 +534,7 @@ void GimbalrotorController::ExtWrenchControl(){
 
   feedforward_acc_cog_pub_.publish (feedforward_acc_cog_msg);
   feedforward_ang_acc_cog_pub_.publish(feedforward_ang_acc_cog_msg);
-  des_wrench_cog_pub_.publish(des_wrench_cog_msg);
+  wrench_error_cog_pub_.publish(wrench_error_cog_msg);
   filtered_est_external_wrench_pub_.publish(filtered_est_external_wrench_msg);
   setTargetWrenchAccCog(target_wrench_acc_cog);
 
