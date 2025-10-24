@@ -516,9 +516,9 @@ void GimbalrotorController::ExtWrenchControl(){
   feedforward_acc_cog_msg.vector.x = feedforward_acc[0];
   feedforward_acc_cog_msg.vector.y = feedforward_acc[1];
   feedforward_acc_cog_msg.vector.z = feedforward_acc[2];
-  feedforward_ang_acc_cog_msg.vector.x = feedforward_ang_acc[3];
-  feedforward_ang_acc_cog_msg.vector.y = feedforward_ang_acc[4];
-  feedforward_ang_acc_cog_msg.vector.z = feedforward_ang_acc[5];
+  feedforward_ang_acc_cog_msg.vector.x = feedforward_ang_acc[0];
+  feedforward_ang_acc_cog_msg.vector.y = feedforward_ang_acc[1];
+  feedforward_ang_acc_cog_msg.vector.z = feedforward_ang_acc[2];
   wrench_error_cog_msg.wrench.force.x = force_error[0];
   wrench_error_cog_msg.wrench.force.y = force_error[1];
   wrench_error_cog_msg.wrench.force.z = force_error[2];
