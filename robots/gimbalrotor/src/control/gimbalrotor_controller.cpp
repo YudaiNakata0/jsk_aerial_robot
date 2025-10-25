@@ -399,17 +399,15 @@ void GimbalrotorController::setAttitudeGains()
 
 void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped msg)
 {
-  Eigen::VectorXd desire_force_at_end;
-  desire_force_at_end[0] = msg.wrench.force.x;
-  desire_force_at_end[1] = msg.wrench.force.y;
-  desire_force_at_end[2] = msg.wrench.force.z;
-  desire_force_at_end[3] = msg.wrench.torque.x;
-  desire_force_at_end[4] = msg.wrench.torque.y;
-  desire_force_at_end[5] = msg.wrench.torque.z;
+  KDL::Wrench w_end(
+                    KDL::Vector(msg.wrench.force.x,  msg.wrench.force.y,  msg.wrench.force.z),
+                    KDL::Vector(msg.wrench.torque.x, msg.wrench.torque.y, msg.wrench.torque.z)
+                    );
 
-  Eigen::MatrixXd adjoint_end_to_cog =
-      gimbalrotor_robot_model_->getDualAdjointMatrix(end_frame_, "cog");
-  desire_wrench_ = adjoint_end_to_cog * desire_force_at_end;
+  KDL::Frame end_to_cog = gimbalrotor_robot_model_->getKdlFrameFromCog(end_frame_);
+  KDL::Wrench w_cog = end_to_cog * w_end;
+  desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
+  desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
 }
 
 void GimbalrotorController::ExtWrenchControl(){
@@ -452,7 +450,7 @@ void GimbalrotorController::ExtWrenchControl(){
   Eigen::Vector3d target_ang_acc = inertia_inv * torque_error;
   Eigen::Vector3d feedforward_acc = cog_rot * (target_acc + feedforward_sum_.head(3));
   Eigen::Vector3d feedforward_ang_acc = cog_rot * (target_ang_acc + feedforward_sum_.tail(3));
-  
+
   if(send_feedforward_switch_flag_ && attaching_flag_)
   {
     // target_pitch_ += target_acc[0];
@@ -516,9 +514,9 @@ void GimbalrotorController::ExtWrenchControl(){
   feedforward_acc_cog_msg.vector.x = feedforward_acc[0];
   feedforward_acc_cog_msg.vector.y = feedforward_acc[1];
   feedforward_acc_cog_msg.vector.z = feedforward_acc[2];
-  feedforward_ang_acc_cog_msg.vector.x = feedforward_ang_acc[3];
-  feedforward_ang_acc_cog_msg.vector.y = feedforward_ang_acc[4];
-  feedforward_ang_acc_cog_msg.vector.z = feedforward_ang_acc[5];
+  feedforward_ang_acc_cog_msg.vector.x = feedforward_ang_acc[0];
+  feedforward_ang_acc_cog_msg.vector.y = feedforward_ang_acc[1];
+  feedforward_ang_acc_cog_msg.vector.z = feedforward_ang_acc[2];
   wrench_error_cog_msg.wrench.force.x = force_error[0];
   wrench_error_cog_msg.wrench.force.y = force_error[1];
   wrench_error_cog_msg.wrench.force.z = force_error[2];

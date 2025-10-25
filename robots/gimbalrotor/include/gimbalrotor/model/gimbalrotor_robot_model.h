@@ -17,9 +17,7 @@ public:
   std::vector<T> getLinksRotationFromCog();
   template <class T>
   std::vector<T> getThrustCoordRot();
-  Eigen::MatrixXd calcDualAdjointFromKDLFrame(const KDL::Frame& T) const;
-  Eigen::MatrixXd getDualAdjointMatrix(const std::string& target_frame,
-                                               const std::string& ref_frame) const;
+  KDL::Frame getKdlFrameFromCog(const std::string& target_frame) const;
 
 private:
   void updateRobotModelImpl(const KDL::JntArray& joint_positions) override;
@@ -44,31 +42,14 @@ inline std::vector<KDL::Rotation> GimbalrotorRobotModel::getThrustCoordRot()
   return thrust_coords_rot_;
 }
 
-inline Eigen::MatrixXd GimbalrotorRobotModel::calcDualAdjointFromKDLFrame(const KDL::Frame& T) const
-{
-  Eigen::Matrix3d R = aerial_robot_model::kdlToEigen(T.M);
-  Eigen::Vector3d p(T.p.x(), T.p.y(), T.p.z());
-  Eigen::Matrix3d p_skew = aerial_robot_model::skew(p);
-
-  Eigen::MatrixXd Ad_dual(6, 6);
-  Ad_dual.setZero();
-  Ad_dual.block<3,3>(0,0) = R;
-  Ad_dual.block<3,3>(0,3) = p_skew * R;
-  Ad_dual.block<3,3>(3,3) = R;
-  return Ad_dual;
-}
-
-inline Eigen::MatrixXd GimbalrotorRobotModel::getDualAdjointMatrix(const std::string& target_frame, const std::string& ref_frame) const
+inline KDL::Frame GimbalrotorRobotModel::getKdlFrameFromCog(const std::string& target_frame) const
 {
   auto& tf_map = const_cast<GimbalrotorRobotModel*>(this)->getSegmentsTf();
-  if (tf_map.find(target_frame) == tf_map.end() || tf_map.find(ref_frame) == tf_map.end())
-    {
-      ROS_ERROR_STREAM("[GimbalrotorRobotModel] invalid frame name in calcDualAdjointBetweenFrames: "
-                       << ref_frame << " or " << target_frame);
-      return Eigen::MatrixXd::Zero(6,6);
-    }
+  if (tf_map.find(target_frame) == tf_map.end()) {
+    ROS_ERROR_STREAM("[GimbalrotorRobotModel] invalid frame: " << target_frame);
+    return KDL::Frame::Identity();
+  }
 
-  // transform from ref_frame to target_frame
-  KDL::Frame ref_to_target = tf_map.at(ref_frame).Inverse() * tf_map.at(target_frame);
-  return calcDualAdjointFromKDLFrame(ref_to_target);
+  KDL::Frame cog = const_cast<GimbalrotorRobotModel*>(this)->getCog<KDL::Frame>();
+  return cog.Inverse() * tf_map.at(target_frame);
 }
