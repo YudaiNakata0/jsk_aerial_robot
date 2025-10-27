@@ -13,7 +13,7 @@ class GetTarget():
         self.setup_ros()
 
     def setup_ros(self):
-        self.sub_mask = rospy.Subscriber("/processed_image/mask", Image, self.callback)
+        self.sub_mask = rospy.Subscriber("/processed_image/filtered_mask", Image, self.callback)
         self.pub_center = rospy.Publisher("/processed_image/center", Image, queue_size=1)
 
     def callback(self, msg):

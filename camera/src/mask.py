@@ -23,6 +23,8 @@ class GenerateMask():
         self.ul = ul
         self.ls = ls
         self.us = us
+        print("lowerb: "+str(lh)+","+str(ll)+","+str(ls))
+        print("upperb: "+str(uh)+","+str(ul)+","+str(us))
 
     def setup_ros(self):
         self.sub_raw = rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, self.callback)
@@ -37,7 +39,8 @@ class GenerateMask():
         self.get_image(msg)
         self.generate_mask()
         self.clean_mask()
-        self.cut_image()
+        path = os.path.expanduser("~/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/camera/src/image/calib_blackpoint.png")
+        self.cut_image(path)
         self.publish_mask()
         
     def get_image(self, image):
@@ -55,9 +58,11 @@ class GenerateMask():
         kernel = np.ones((3, 3), np.uint8)
         self.mask_cleaned = cv2.morphologyEx(self.mask, cv2.MORPH_OPEN, kernel)
 
-    def cut_image(self):
-        path = os.path.expanduser("~/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/camera/src/masked_calib_white.png")
-        cut_area = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+    def cut_image(self, path):
+        try:
+            cut_area = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
+        except:
+            print("cannot load image for calibration.")
         kernel = np.ones((5, 5), np.uint8)
         cut_area_dilated = cv2.dilate(cut_area, kernel, iterations=3)
         valid_area_mask = cv2.bitwise_not(cut_area_dilated)
@@ -77,10 +82,10 @@ class GenerateMask():
 if __name__ == "__main__":
     rospy.init_node("generate_mask_node")
     lh = rospy.get_param("/generate_mask_node/lowerb_hue", 0)
-    uh = rospy.get_param("/generate_mask_node/upperb_hue", 10)
-    ll = rospy.get_param("/generate_mask_node/lowerb_luminance", 50)
-    ul = rospy.get_param("/generate_mask_node/upperb_luminance", 255)
-    ls = rospy.get_param("/generate_mask_node/lowerb_saturation", 50)
+    uh = rospy.get_param("/generate_mask_node/upperb_hue", 179)
+    ll = rospy.get_param("/generate_mask_node/lowerb_luminance", 0)
+    ul = rospy.get_param("/generate_mask_node/upperb_luminance", 50)
+    ls = rospy.get_param("/generate_mask_node/lowerb_saturation", 0)
     us = rospy.get_param("/generate_mask_node/upperb_saturation", 255)
 
     Mask = GenerateMask(lh, uh, ll, ul, ls, us)
