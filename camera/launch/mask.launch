@@ -17,8 +17,6 @@
     <param name="upperb_saturation" value="$(arg upperb_saturation)"/>
   </node>
 
-  <node pkg="camera" type="get_points.py" name="detect_target_node"/>
-
   <!-- image viewer -->
   <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
   
