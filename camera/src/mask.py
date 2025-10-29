@@ -6,7 +6,7 @@ import os
 import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
 
-class GenerateMask():
+class MaskGenerator():
     def __init__(self,lh,uh,ll,ul,ls,us):
         self.time = rospy.get_time()
         self.bridge = CvBridge()
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     ls = rospy.get_param("/generate_mask_node/lowerb_saturation", 0)
     us = rospy.get_param("/generate_mask_node/upperb_saturation", 255)
 
-    Mask = GenerateMask(lh, uh, ll, ul, ls, us)
+    generator = MaskGenerator(lh, uh, ll, ul, ls, us)
     try:
         rospy.spin()
     except KeyboardInterrupt:

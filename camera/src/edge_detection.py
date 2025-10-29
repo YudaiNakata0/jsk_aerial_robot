@@ -5,7 +5,7 @@ from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import numpy as np
 
-class EdgeDetection():
+class EdgeDetector():
     def __init__(self):
         self.bridge = CvBridge()
 
@@ -45,6 +45,6 @@ class EdgeDetection():
         
 if __name__ == '__main__':
     rospy.init_node("contour_extractor", anonymous=True)
-    node = EdgeDetection()
+    detector = EdgeDetector()
     rospy.spin()
     cv2.destroyAllWindows()

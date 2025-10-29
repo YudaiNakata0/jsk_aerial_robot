@@ -8,7 +8,7 @@ if __name__=="__main__":
     file_name = input("File name: ")
     parameters = input("Mask parameters: ").split()
     if parameters == None:
-        Mask = GenerateMask(0, 179, 0, 50, 0, 255, single_flag=1)
+        generator = MaskGenerator(0, 179, 0, 50, 0, 255, single_flag=1)
     else:
         lh = int(parameters[0])
         uh = int(parameters[1])
@@ -16,5 +16,5 @@ if __name__=="__main__":
         ul = int(parameters[3])
         ls = int(parameters[4])
         us = int(parameters[5])
-        Mask = GenerateMask(lh, uh, ll, ul, ls, us, single_flag=1)
-    Mask.generate_single_mask(file_name)
+        generator = MaskGenerator(lh, uh, ll, ul, ls, us, single_flag=1)
+    generator.generate_single_mask(file_name)
