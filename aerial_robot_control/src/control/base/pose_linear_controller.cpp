@@ -180,6 +180,9 @@ namespace aerial_robot_control
 
 
     pid_pub_ = nh_.advertise<aerial_robot_msgs::PoseControlPid>("debug/pose/pid", 10);
+
+    /* external wrench estimation*/
+    startWrenchEstimation();
   }
 
   void PoseLinearController::reset()
@@ -348,6 +351,21 @@ namespace aerial_robot_control
     pid_msg_.yaw.err_p = err_yaw;
     pid_msg_.yaw.target_d = target_omega_.z();
     pid_msg_.yaw.err_d = target_omega_.z() - omega_.z();
+
+    // wrench estimator
+    Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
+    tf::Matrix3x3 uav_rot = estimator_->getOrientation(Frame::COG, estimate_mode_);
+    tf::Vector3 target_acc_w(pid_controllers_.at(X).result(),
+                             pid_controllers_.at(Y).result(),
+                             pid_controllers_.at(Z).result());
+    double target_ang_acc_x = pid_controllers_.at(ROLL).result();
+    double target_ang_acc_y = pid_controllers_.at(PITCH).result();
+    double target_ang_acc_z = pid_controllers_.at(YAW).result();
+    // double target_ang_acc_z = candidate_yaw_term_;
+    tf::Vector3 target_acc_cog = uav_rot.inverse() * target_acc_w;
+    target_wrench_acc_cog.head(3) = Eigen::Vector3d(target_acc_cog.x(), target_acc_cog.y(), target_acc_cog.z());
+    target_wrench_acc_cog.tail(3) = Eigen::Vector3d(target_ang_acc_x, target_ang_acc_y, target_ang_acc_z);
+    setTargetWrenchAccCog(target_wrench_acc_cog);
   }
 
   void PoseLinearController::sendCmd()
@@ -355,6 +373,76 @@ namespace aerial_robot_control
     /* ros publish */
     pid_pub_.publish(pid_msg_);
   }
+
+  void PoseLinearController::externalWrenchEstimate()
+  {
+    const Eigen::VectorXd target_wrench_acc_cog = getTargetWrenchAccCog();
+
+    if(navigator_->getNaviState() != aerial_robot_navigation::HOVER_STATE &&
+       navigator_->getNaviState() != aerial_robot_navigation::LAND_STATE)
+      {
+        prev_est_wrench_timestamp_ = 0;
+        integrate_term_ = Eigen::VectorXd::Zero(6);
+        return;
+      }else if(target_wrench_acc_cog.size() == 0){
+        ROS_WARN("Target wrench value for wrench estimation is not setted.");
+        prev_est_wrench_timestamp_ = 0;
+        integrate_term_ = Eigen::VectorXd::Zero(6);
+        return;
+      }
+
+    Eigen::Vector3d vel_w, omega_cog; // workaround: use the filtered value
+    auto imu_handler = boost::dynamic_pointer_cast<sensor_plugin::Imu>(estimator_->getImuHandler(0));
+    tf::vectorTFToEigen(imu_handler->getFilteredVelCog(), vel_w);
+    tf::vectorTFToEigen(imu_handler->getFilteredOmegaCog(), omega_cog);
+    Eigen::Matrix3d cog_rot;
+    tf::matrixTFToEigen(estimator_->getOrientation(Frame::COG, estimate_mode_), cog_rot);
+
+   Eigen::Matrix3d inertia = robot_model_->getInertia<Eigen::Matrix3d>();
+    double mass = robot_model_->getMass();
+
+    Eigen::VectorXd sum_momentum = Eigen::VectorXd::Zero(6);
+    sum_momentum.head(3) = mass * vel_w;
+    sum_momentum.tail(3) = inertia * omega_cog;
+
+    Eigen::VectorXd target_wrench_cog = Eigen::VectorXd::Zero(6);
+    target_wrench_cog.head(3) = mass * target_wrench_acc_cog.head(3);
+    target_wrench_cog.tail(3) = inertia * target_wrench_acc_cog.tail(3);
+
+    Eigen::MatrixXd J_t = Eigen::MatrixXd::Identity(6,6);
+    J_t.topLeftCorner(3,3) = cog_rot;
+
+    Eigen::VectorXd N = mass * robot_model_->getGravity();
+    N.tail(3) = aerial_robot_model::skew(omega_cog) * (inertia * omega_cog);
+
+    if(prev_est_wrench_timestamp_ == 0)
+      {
+        prev_est_wrench_timestamp_ = ros::Time::now().toSec();
+        init_sum_momentum_ = sum_momentum; // not good
+      }
+
+    double dt = ros::Time::now().toSec() - prev_est_wrench_timestamp_;
+
+    integrate_term_ += (J_t * target_wrench_cog - N + est_external_wrench_) * dt;
+
+    est_external_wrench_ = momentum_observer_matrix_ * (sum_momentum - init_sum_momentum_ - integrate_term_);
+
+    Eigen::VectorXd est_external_wrench_cog = est_external_wrench_;
+    est_external_wrench_cog.head(3) = cog_rot.inverse() * est_external_wrench_.head(3);
+
+    geometry_msgs::WrenchStamped wrench_msg;
+    wrench_msg.header.stamp.fromSec(estimator_->getImuLatestTimeStamp());
+    wrench_msg.wrench.force.x = est_external_wrench_(0);
+    wrench_msg.wrench.force.y = est_external_wrench_(1);
+    wrench_msg.wrench.force.z = est_external_wrench_(2);
+    wrench_msg.wrench.torque.x = est_external_wrench_(3);
+    wrench_msg.wrench.torque.y = est_external_wrench_(4);
+    wrench_msg.wrench.torque.z = est_external_wrench_(5);
+    estimate_external_wrench_pub_.publish(wrench_msg);
+
+    prev_est_wrench_timestamp_ = ros::Time::now().toSec();
+  }
+
 
   void PoseLinearController::cfgPidCallback(aerial_robot_control::PIDConfig &config, uint32_t level, std::vector<int> controller_indices)
   {
@@ -389,4 +477,37 @@ namespace aerial_robot_control
           }
       }
   }
+
+  void PoseLinearController::startWrenchEstimation()
+  {
+    estimate_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("estimated_external_wrench", 1);
+
+    est_external_wrench_ = Eigen::VectorXd::Zero(6);
+    init_sum_momentum_ = Eigen::VectorXd::Zero(6);
+    integrate_term_ = Eigen::VectorXd::Zero(6);
+    momentum_observer_matrix_ = Eigen::MatrixXd::Identity(6,6);
+    prev_est_wrench_timestamp_ = 0;
+
+    double force_weight, torque_weight;
+    ros::NodeHandle control_nh(nh_, "controller");
+    getParam<double>(control_nh, "momentum_observer_force_weight", force_weight, 10.0);
+    getParam<double>(control_nh, "momentum_observer_torque_weight", torque_weight, 10.0);
+    momentum_observer_matrix_.topRows(3) *= force_weight;
+    momentum_observer_matrix_.bottomRows(3) *= torque_weight;
+
+    wrench_estimate_thread_ = boost::thread([this]()
+                                            {
+                                              double update_rate;
+                                              ros::NodeHandle control_nh(nh_, "controller");
+                                              control_nh.param ("wrench_estimate_update_rate", update_rate, 100.0);
+
+                                              ros::Rate loop_rate(update_rate);
+                                              while(ros::ok())
+                                                {
+                                                  externalWrenchEstimate();
+                                                  loop_rate.sleep();
+                                                }
+                                            });
+  }
+
 };
