@@ -19,18 +19,18 @@
     </node>
 
 
-    <node name="image_proc" pkg="image_proc" type="image_proc" output="screen">
-      <remap from="image_raw" to="/usb_cam/image_raw"/>
-      <remap from="camera_info" to="/usb_cam/camera_info"/>
-      <remap from="image_rect_color" to="/usb_cam/image_rect_color" />
-    </node>
+    <!-- <node name="image_proc" pkg="image_proc" type="image_proc" output="screen"> -->
+    <!--   <remap from="image_raw" to="/usb_cam/image_raw"/> -->
+    <!--   <remap from="camera_info" to="/usb_cam/camera_info"/> -->
+    <!--   <remap from="image_rect_color" to="/usb_cam/image_rect_color" /> -->
+    <!-- </node> -->
 
-    <include file="$(find apriltag_ros)/launch/continuous_detection.launch">
-      <remap from="camera_info" to="/usb_cam/camera_info" />
-      <arg name="camera_name" default="/usb_cam" />
-      <arg name="image_topic" default="image_rect_color" />
-    </include>
-    <rosparam command="load" file="$(find camera)/config/tags.yaml" ns="/apriltag_ros_continuous_node"/>
+    <!-- <include file="$(find apriltag_ros)/launch/continuous_detection.launch"> -->
+    <!--   <remap from="camera_info" to="/usb_cam/camera_info" /> -->
+    <!--   <arg name="camera_name" default="/usb_cam" /> -->
+    <!--   <arg name="image_topic" default="image_rect_color" /> -->
+    <!-- </include> -->
+    <!-- <rosparam command="load" file="$(find camera)/config/tags.yaml" ns="/apriltag_ros_continuous_node"/> -->
 
 
 <!--     <rosparam command="load" file="$(find apriltag_ros)/config/settings.yaml" ns="$(arg node_namespace)" /> -->
