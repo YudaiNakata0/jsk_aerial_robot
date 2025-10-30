@@ -36,9 +36,9 @@ private:
   ros::Publisher feedforward_acc_cog_pub_;
   ros::Publisher feedforward_ang_acc_cog_pub_;
   ros::Publisher wrench_error_cog_pub_;
-  ros::Publisher attaching_flag_pub_;
   ros::Publisher filtered_est_external_wrench_pub_;  // for wrenchcomp
   ros::Subscriber desire_wrench_sub_;                // for wrenchcomp
+  ros::Subscriber attaching_flag_sub_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
   std::vector<float> target_base_thrust_;
@@ -85,5 +85,6 @@ private:
   void setAttitudeGains();
   void DesireWrenchCallback(geometry_msgs::WrenchStamped msg);
   void ExtWrenchControl();
+  void AttachingFlagCallBack(std_msgs::Bool msg);
 };
 };  // namespace aerial_robot_control
