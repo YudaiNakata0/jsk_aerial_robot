@@ -36,7 +36,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   feedforward_acc_cog_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("feedforward_acc_world", 1);
   feedforward_ang_acc_cog_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("feedforward_ang_acc_cog", 1);
   wrench_error_cog_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("wrench_error_cog", 1);
-  attaching_flag_pub_ = nh_.advertise<std_msgs::Bool>("attaching_flag",1);
+  attaching_flag_sub_ = nh_.subscribe("attaching_flag", 1, &GimbalrotorController::AttachingFlagCallBack, this);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
@@ -419,10 +419,6 @@ void GimbalrotorController::ExtWrenchControl(){
   Eigen::VectorXd filtered_est_external_wrench;
   filtered_est_external_wrench = lpf_est_external_wrench_.filterFunction(est_external_wrench_);
 
-  std_msgs::Bool attaching_flag_msg;
-  attaching_flag_msg.data = attaching_flag_;
-  attaching_flag_pub_.publish(attaching_flag_msg);
-
   Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
   tf::Matrix3x3 uav_rot = estimator_->getOrientation(Frame::COG, estimate_mode_);
   tf::Vector3 target_acc_w(pid_controllers_.at(X).result(),
@@ -536,6 +532,11 @@ void GimbalrotorController::ExtWrenchControl(){
   filtered_est_external_wrench_pub_.publish(filtered_est_external_wrench_msg);
   setTargetWrenchAccCog(target_wrench_acc_cog);
 
+}
+
+void GimbalrotorController::AttachingFlagCallBack(std_msgs::Bool msg)
+{
+  attaching_flag_ = msg.data;
 }
 
 }  // namespace aerial_robot_control
