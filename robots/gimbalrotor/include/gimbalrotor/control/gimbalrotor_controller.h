@@ -8,7 +8,9 @@
 #include <aerial_robot_estimation/state_estimation.h>
 #include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/UInt32.h>
+#include <std_msgs/Bool.h>
 #include <gimbalrotor/model/gimbalrotor_robot_model.h>
+#include <thread>
 
 namespace aerial_robot_control
 {
@@ -31,6 +33,12 @@ private:
   ros::Publisher rpy_gain_pub_;                      // for spinal
   ros::Publisher torque_allocation_matrix_inv_pub_;  // for spinal
   ros::Publisher gimbal_dof_pub_;                    // for spinal
+  ros::Publisher feedforward_acc_cog_pub_;
+  ros::Publisher feedforward_ang_acc_cog_pub_;
+  ros::Publisher wrench_error_cog_pub_;
+  ros::Publisher filtered_est_external_wrench_pub_;  // for wrenchcomp
+  ros::Subscriber desire_wrench_sub_;                // for wrenchcomp
+  ros::Subscriber attaching_flag_sub_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
   std::vector<float> target_base_thrust_;
@@ -42,12 +50,29 @@ private:
   Eigen::VectorXd target_vectoring_f_rot_;
   Eigen::MatrixXd integrated_map_inv_trans_;
   Eigen::MatrixXd integrated_map_inv_rot_;
+  Eigen::VectorXd estimated_external_wrench_in_cog_;
+  Eigen::VectorXd desire_wrench_;
+  Eigen::VectorXd desire_wrench_from_pos_;
+  Eigen::VectorXd target_wrench_cog_;
+  Eigen::VectorXd p_wrench_stamp_;
+  Eigen::VectorXd feedforward_sum_;
+  Eigen::VectorXd desire_pos_;
+  Eigen::VectorXd filtered_ftsensor_wrench_;
+
   double candidate_yaw_term_;
   int gimbal_dof_;
   int rotor_coef_;
   bool gimbal_calc_in_fc_;
   bool underactuate_;
   double target_roll_ = 0.0, target_pitch_ = 0.0;
+
+  bool send_feedforward_switch_flag_;
+  bool attaching_flag_, const_err_i_flag_, first_flag_;
+  double err_i_x_, err_i_y_, err_i_z_, err_i_yaw_, err_p_y_;
+  double wrench_diff_gain_;
+  double acc_shock_thres_;
+  double x_p_gain_, y_p_gain_;
+  IirFilter lpf_est_external_wrench_;
 
   void rosParamInit();
   bool update() override;
@@ -58,5 +83,8 @@ private:
   void sendGimbalCommand();
   void sendTorqueAllocationMatrixInv();
   void setAttitudeGains();
+  void DesireWrenchCallback(geometry_msgs::WrenchStamped msg);
+  void ExtWrenchControl();
+  void AttachingFlagCallBack(std_msgs::Bool msg);
 };
 };  // namespace aerial_robot_control
