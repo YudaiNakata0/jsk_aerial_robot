@@ -67,7 +67,7 @@ void GimbalrotorController::rosParamInit()
   getParam<bool>(control_nh, "underactuate", underactuate_, false);
   //  for wrench comp
   getParam<double>(control_nh, "wrench_diff_gain", wrench_diff_gain_, 1.0);
-  getParam<bool>(control_nh, "send_feedforward_switch_flag", send_feedforward_switch_flag_, true);
+  getParam<bool>(control_nh, "send_feedforward_switch_flag", send_feedforward_switch_flag_, false);
   getParam<double>(control_nh, "acc_shock_thres", acc_shock_thres_, 20.0);
   double cutoff_freq, sample_freq;
   getParam<double>(control_nh, "cutoff_freq", cutoff_freq, 25.0);
