@@ -452,10 +452,10 @@ void GimbalrotorController::ExtWrenchControl(){
     // target_pitch_ += target_acc[0];
     // target_roll_ += target_acc[1];
     navigator_->setTargetAccX(feedforward_acc[0]);
-    navigator_->setTargetAccY(feedforward_acc[1]);
+    // navigator_->setTargetAccY(feedforward_acc[1]);
     // navigator_->setTargetAngAccZ(feedforward_ang_acc[2]);
     target_wrench_acc_cog[0] += feedforward_acc[0];
-    target_wrench_acc_cog[1] += feedforward_acc[1];
+    // target_wrench_acc_cog[1] += feedforward_acc[1];
     // target_wrench_acc_cog[5] += feedforward_ang_acc[2];
 
     feedforward_sum_.head(3) += target_acc * wrench_diff_gain_;
@@ -466,7 +466,7 @@ void GimbalrotorController::ExtWrenchControl(){
   if(!attaching_flag_)
     {
     navigator_->setTargetAccX(0);
-    navigator_->setTargetAccY(0);
+    // navigator_->setTargetAccY(0);
     // navigator_->setTargetAngAccZ(0);
     feedforward_sum_ = Eigen::VectorXd::Zero(6);
   }
