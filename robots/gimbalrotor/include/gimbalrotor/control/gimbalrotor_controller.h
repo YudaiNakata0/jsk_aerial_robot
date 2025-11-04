@@ -39,6 +39,8 @@ private:
   ros::Publisher filtered_est_external_wrench_pub_;  // for wrenchcomp
   ros::Subscriber desire_wrench_sub_;                // for wrenchcomp
   ros::Subscriber attaching_flag_sub_;
+  ros::Subscriber send_feedforward_switch_flag_sub_;
+  ros::Subscriber flight_state_sub_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
   std::vector<float> target_base_thrust_;
@@ -58,6 +60,7 @@ private:
   Eigen::VectorXd feedforward_sum_;
   Eigen::VectorXd desire_pos_;
   Eigen::VectorXd filtered_ftsensor_wrench_;
+  Eigen::VectorXd offset_external_wrench_;
 
   double candidate_yaw_term_;
   int gimbal_dof_;
@@ -67,12 +70,14 @@ private:
   double target_roll_ = 0.0, target_pitch_ = 0.0;
 
   bool send_feedforward_switch_flag_;
+  bool offset_record_flag_;
   bool attaching_flag_, const_err_i_flag_, first_flag_;
   double err_i_x_, err_i_y_, err_i_z_, err_i_yaw_, err_p_y_;
   double wrench_diff_gain_;
   double acc_shock_thres_;
   double x_p_gain_, y_p_gain_;
   IirFilter lpf_est_external_wrench_;
+  int flight_state_;
 
   void rosParamInit();
   bool update() override;
@@ -86,5 +91,7 @@ private:
   void DesireWrenchCallback(geometry_msgs::WrenchStamped msg);
   void ExtWrenchControl();
   void AttachingFlagCallBack(std_msgs::Bool msg);
+  void SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg);
+  void FlightStateCallback(std_msgs::UInt8 msg);
 };
 };  // namespace aerial_robot_control
