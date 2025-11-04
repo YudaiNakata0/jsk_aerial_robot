@@ -54,6 +54,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   offset_record_flag_ = false;
   offset_external_wrench_ = Eigen::VectorXd::Zero(6);
   flight_state_ = 0;
+  target_acc_gain_ = 0.01;
 }
 
 void GimbalrotorController::reset()
@@ -464,8 +465,8 @@ void GimbalrotorController::ExtWrenchControl(){
   force_error = desire_wrench_.head(3) + cog_rot.inverse() * filtered_est_external_wrench.head(3);
   torque_error = desire_wrench_.tail(3) + cog_rot.inverse() * filtered_est_external_wrench.tail(3);
 
-  Eigen::Vector3d target_acc = mass_inv * force_error;
-  Eigen::Vector3d target_ang_acc = inertia_inv * torque_error;
+  Eigen::Vector3d target_acc = target_acc_gain_ * mass_inv * force_error;
+  Eigen::Vector3d target_ang_acc = target_acc_gain_ * inertia_inv * torque_error;
   Eigen::Vector3d feedforward_acc = cog_rot * (target_acc + feedforward_sum_.head(3));
   Eigen::Vector3d feedforward_ang_acc = cog_rot * (target_ang_acc + feedforward_sum_.tail(3));
 

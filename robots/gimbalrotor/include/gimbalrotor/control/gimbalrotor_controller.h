@@ -78,6 +78,7 @@ private:
   double x_p_gain_, y_p_gain_;
   IirFilter lpf_est_external_wrench_;
   int flight_state_;
+  double target_acc_gain_;
 
   void rosParamInit();
   bool update() override;
