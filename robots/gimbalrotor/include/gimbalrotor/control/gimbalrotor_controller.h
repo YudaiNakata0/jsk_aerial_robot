@@ -40,7 +40,7 @@ private:
   ros::Subscriber desire_wrench_sub_;                // for wrenchcomp
   ros::Subscriber attaching_flag_sub_;
   ros::Subscriber send_feedforward_switch_flag_sub_;
-  ros::Subscriber flight_state_sub_;
+  ros::Time time_hover_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
   std::vector<float> target_base_thrust_;
