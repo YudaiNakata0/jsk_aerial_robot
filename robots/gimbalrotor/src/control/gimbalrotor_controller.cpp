@@ -413,7 +413,7 @@ void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped ms
   KDL::Wrench w_cog = end_to_cog * w_end;
   desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
   desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
-  desire_wrench_ + offset_external_wrench_;
+  //desire_wrench_ + offset_external_wrench_;
 }
 
 void GimbalrotorController::ExtWrenchControl(){
@@ -482,7 +482,7 @@ void GimbalrotorController::ExtWrenchControl(){
   {
     // target_pitch_ += target_acc[0];
     // target_roll_ += target_acc[1];
-    navigator_->setXyControlMode(2);
+    navigator_->setXyControlMode(1);
     navigator_->setTargetAccX(target_acc[0]);
     // navigator_->setTargetAccY(feedforward_acc[1]);
     // navigator_->setTargetAngAccZ(feedforward_ang_acc[2]);
@@ -497,7 +497,6 @@ void GimbalrotorController::ExtWrenchControl(){
   }
   if(!attaching_flag_)
     {
-      pid_controllers_.at(X).setGains(0,0,0);
     navigator_->setTargetAccX(0);
     // navigator_->setTargetAccY(0);
     // navigator_->setTargetAngAccZ(0);
