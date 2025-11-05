@@ -413,6 +413,7 @@ void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped ms
   KDL::Wrench w_cog = end_to_cog * w_end;
   desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
   desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
+  desire_wrench_ + offset_external_wrench_;
 }
 
 void GimbalrotorController::ExtWrenchControl(){
@@ -469,8 +470,8 @@ void GimbalrotorController::ExtWrenchControl(){
   tf::matrixTFToEigen(estimator_->getOrientation(Frame::COG, estimate_mode_), cog_rot);
 
   Eigen::Vector3d force_error, torque_error;
-  force_error = desire_wrench_.head(3) + offset_external_wrench_.head(3); // + cog_rot.inverse() * filtered_est_external_wrench.head(3);
-  torque_error = desire_wrench_.tail(3) + offset_external_wrench_.tail(3); //+ cog_rot.inverse() * filtered_est_external_wrench.tail(3);
+  force_error = desire_wrench_.head(3); // + cog_rot.inverse() * filtered_est_external_wrench.head(3);
+  torque_error = desire_wrench_.tail(3); //+ cog_rot.inverse() * filtered_est_external_wrench.tail(3);
 
   Eigen::Vector3d target_acc = target_acc_gain_ * mass_inv * force_error;
   Eigen::Vector3d target_ang_acc = target_acc_gain_ * inertia_inv * torque_error;
