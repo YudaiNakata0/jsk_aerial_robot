@@ -76,6 +76,7 @@ void BaseNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   flight_state_pub_ = nh_.advertise<std_msgs::UInt8>("flight_state", 1);
   path_pub_ = nh_.advertise<nav_msgs::Path>("trajectory", 1);
   waypoint_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
+  xy_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("xy_control_mode", 1);
 
   estimate_mode_ = estimator_->getEstimateMode();
   force_landing_start_time_ = ros::Time::now();
@@ -608,7 +609,8 @@ void BaseNavigator::update()
       else
         {
           if(xy_control_mode_ == ACC_CONTROL_MODE &&
-             prev_xy_control_mode_ != ACC_CONTROL_MODE)
+             prev_xy_control_mode_ != ACC_CONTROL_MODE &&
+	     getNaviState() != HOVER_STATE)
             {
               ROS_INFO("Estimation for X, Y state is established, siwtch back to the xy control mode");
               xy_control_mode_ = prev_xy_control_mode_;
@@ -860,6 +862,9 @@ void BaseNavigator::update()
   if(force_landing_flag_) state_msg.data = FORCE_LANDING_STATE;
   else if(low_voltage_flag_) state_msg.data = LOW_BATTERY_STATE;
   flight_state_pub_.publish(state_msg);
+  std_msgs::UInt8 xy_control_mode_msg;
+  xy_control_mode_msg.data = xy_control_mode_;
+  xy_control_mode_pub_.publish(xy_control_mode_msg);
 }
 
 void BaseNavigator::updateLandCommand()

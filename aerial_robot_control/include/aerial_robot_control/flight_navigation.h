@@ -239,6 +239,7 @@ namespace aerial_robot_navigation
     ros::Publisher  flight_state_pub_;
     ros::Publisher  path_pub_;
     ros::Publisher  waypoint_pub_;
+    ros::Publisher  xy_control_mode_pub_;
     ros::Subscriber navi_sub_;
     ros::Subscriber single_goal_sub_;
     ros::Subscriber simple_move_base_goal_sub_;
