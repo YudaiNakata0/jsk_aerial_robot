@@ -37,7 +37,7 @@
       <visual>
         <origin xyz="0 0 0.0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://gimbalrotor/urdf/beatle/mesh/base_link_default.STL"/>
+          <mesh filename="package://gimbalrotor/urdf/beatle/mesh/base_link_withpen.STL"/>
         </geometry>
       </visual>
       <collision>

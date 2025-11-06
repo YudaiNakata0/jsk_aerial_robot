@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="lowerb_hue" default="0"/>
+  <arg name="upperb_hue" default="179"/>
+  <arg name="lowerb_luminance" default="0"/>
+  <arg name="upperb_luminance" default="50"/>
+  <arg name="lowerb_saturation" default="0"/>
+  <arg name="upperb_saturation" default="255"/>
+
+  <!-- generate mask -->
+  <node pkg="camera" type="mask.py" name="generate_mask_node">
+    <param name="lowerb_hue" value="$(arg lowerb_hue)"/>
+    <param name="upperb_hue" value="$(arg upperb_hue)"/>
+    <param name="lowerb_luminance" value="$(arg lowerb_luminance)"/>
+    <param name="upperb_luminance" value="$(arg upperb_luminance)"/>
+    <param name="lowerb_saturation" value="$(arg lowerb_saturation)"/>
+    <param name="upperb_saturation" value="$(arg upperb_saturation)"/>
+  </node>
+
+  <node pkg="camera" type="get_points.py" name="detect_target_node"/>
+
+  <!-- image viewer -->
+  <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
+  
+</launch>

@@ -23,13 +23,14 @@ class ImageProcess():
         self.th = th
         self.minll = minll
         self.maxlg = maxlg
-        self.nozzle_x = 700
+        self.nozzle_x = 695
         self.nozzle_y = 300
         self.window_x = 200
         self.window_y = 100
         self.error_x = 40
         self.sub = rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, self.callback)
         self.pub_cut = rospy.Publisher("/processed_image/cut", Image, queue_size=1)
+        self.pub_mask = rospy.Publisher("/processed_image/mask", Image, queue_size=1)
         self.pub_lines = rospy.Publisher("/processed_image/lines", Image, queue_size=1)
         self.bridge = CvBridge()
 
@@ -64,10 +65,12 @@ class ImageProcess():
         plt.show()
 
     def show_mask(self):
-        cv2.imshow("Masked Image", self.mask)
+        #cv2.imshow("Masked Image", self.mask)
         #cv2.resizeWindow("Masked Image", 650, 450)
-        cv2.moveWindow("Masked Image", 510, 100)
-        cv2.waitKey(1)
+        #cv2.moveWindow("Masked Image", 510, 100)
+        #cv2.waitKey(1)
+        topic_image = self.bridge.cv2_to_imgmsg(self.mask, encoding="mono8")
+        self.pub_mask.publish(topic_image)
 
     def save_mask(self):
         new_name = "masked_" + self.file_name
@@ -84,7 +87,8 @@ class ImageProcess():
         lines = cv2.HoughLinesP(edges, rho=1, theta=np.pi/360, threshold=self.th, minLineLength=self.minll, maxLineGap=self.maxlg)
         print(lines)
         line_image = cv2.cvtColor(self.mask, cv2.COLOR_GRAY2RGB)
-        cv2.rectangle(line_image, (self.window_x-self.error_x, 0), (self.window_x+self.error_x, self.nozzle_y), (0, 255, 0), 3)
+        #cv2.rectangle(line_image, (self.window_x-self.error_x, 0), (self.window_x+self.error_x, self.nozzle_y), (0, 255, 0), 3)
+        cv2.circle(line_image, (self.window_x, self.nozzle_y), 5, (0, 255, 0), -1)
         if lines is not None:
             for line in lines[0]:
                 if self.select_lines(line):
@@ -93,7 +97,7 @@ class ImageProcess():
                     cv2.line(line_image, (x1, y1), (x2, y2), (255, 0, 0), 5)
         cv2.imshow("Lines_hough", line_image)
         #cv2.resizeWindow("Lines_hough", 650, 450)
-        cv2.moveWindow("Lines_hough", 920, 100)
+        cv2.moveWindow("Lines_hough", 510, 100)
         cv2.waitKey(1)
         topic_image = self.bridge.cv2_to_imgmsg(line_image, encoding="bgr8")
         self.pub_lines.publish(topic_image)
@@ -136,7 +140,7 @@ class ImageProcess():
         self.convert_format()
         self.generate_mask()
         self.show_mask()
-        self.get_line()
+        #self.get_line()
         #self.get_line_lsd()
         
 if __name__ == "__main__":
