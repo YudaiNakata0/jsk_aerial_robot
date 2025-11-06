@@ -265,7 +265,8 @@ void BaseNavigator::naviCallback(const aerial_robot_msgs::FlightNavConstPtr & ms
     case aerial_robot_msgs::FlightNav::VEL_MODE:
       {
         /* do not switch to pure vel mode */
-        xy_control_mode_ = POS_CONTROL_MODE;
+        // xy_control_mode_ = POS_CONTROL_MODE;
+	xy_control_mode_ = VEL_CONTROL_MODE;
 
         teleop_reset_time_ = teleop_reset_duration_ + ros::Time::now().toSec();
 
