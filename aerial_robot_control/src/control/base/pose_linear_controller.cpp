@@ -241,9 +241,10 @@ namespace aerial_robot_control
         pid_controllers_.at(X).update(target_pos_.x() - pos_.x(), du, target_vel_.x() - vel_.x(), target_acc_.x());
         pid_controllers_.at(Y).update(target_pos_.y() - pos_.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
         break;
-      case aerial_robot_navigation::VEL_CONTROL_MODE:
+      case aerial_robot_navigation::VEL_CONTROL_MODE: // vel mode only for x
         pid_controllers_.at(X).update(0, du, target_vel_.x() - vel_.x(), target_acc_.x());
-        pid_controllers_.at(Y).update(0, du, target_vel_.y() - vel_.y(), target_acc_.y());
+        // pid_controllers_.at(Y).update(0, du, target_vel_.y() - vel_.y(), target_acc_.y());
+	pid_controllers_.at(Y).update(target_pos_.y() - pos_.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
         break;
       case aerial_robot_navigation::ACC_CONTROL_MODE:
         pid_controllers_.at(X).update(0, du, 0, target_acc_.x());
