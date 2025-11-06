@@ -413,7 +413,8 @@ void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped ms
   KDL::Wrench w_cog = end_to_cog * w_end;
   desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
   desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
-  //desire_wrench_ + offset_external_wrench_;
+  // apply wrench offset
+  desire_wrench_ -= offset_external_wrench_;
 }
 
 void GimbalrotorController::ExtWrenchControl(){
