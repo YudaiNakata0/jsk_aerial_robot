@@ -58,6 +58,10 @@
   <exec_depend>roscpp</exec_depend>
   <exec_depend>rospy</exec_depend>
   <exec_depend>std_msgs</exec_depend>
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>image_proc</exec_depend>
+  <exec_depend>apriltag_ros</exec_depend>
+  <exec_depend>rqt_image_view</exec_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

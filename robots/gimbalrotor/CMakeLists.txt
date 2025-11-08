@@ -38,6 +38,17 @@ install(DIRECTORY config plugins launch
   USE_SOURCE_PERMISSIONS
   )
 
+install(PROGRAMS
+  scripts/approach.py
+  scripts/get_tf.py
+  scripts/move_end_effector.py
+  scripts/bridging_main.py
+  scripts/end_effector_navigation.py
+  scripts/mocap_subscriber.py
+  scripts/phase_shift_servos.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
   add_subdirectory(test)

@@ -11,6 +11,26 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
+)
+
+catkin_package(
+  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs  
+)
+
+install(PROGRAMS
+  src/line_detection.py
+  src/get_points.py
+  src/generate_mask_from_file.py
+  src/circle_detection.py
+  src/check_image.py
+  src/red_detection.py
+  src/camera_red_detection.py
+  src/line_detection_random.py
+  src/mask.py
+  src/color_judge.py
+  src/edge_detection.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## System dependencies are found with CMake's conventions
