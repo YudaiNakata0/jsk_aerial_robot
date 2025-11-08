@@ -19,6 +19,7 @@ class CircleDetector():
     def setup_ros(self):
         self.sub_image = rospy.Subscriber(self.topic, Image, self.callback)
         self.pub_circle = rospy.Publisher("/target/circle", Vector3, queue_size=1)
+        self.pub_circle_image = rospy.Publisher("/processed_image/circle", Image, queue_size=1)
 
     # サンプル画像（白黒）の読み込み
     def load_calib_image(self, path):
@@ -41,12 +42,12 @@ class CircleDetector():
 
         # ノイズ除去
         gray = cv2.medianBlur(gray, 5)
-        cv2.imshow("Grayscale", gray)
+        # cv2.imshow("Grayscale", gray)
 
         # mask
         if self.is_mask_exist:
             gray_masked = cv2.bitwise_and(gray, gray, mask=cv2.bitwise_not(self.mask))
-            cv2.imshow("Masked Grayscale", gray_masked)
+            # cv2.imshow("Masked Grayscale", gray_masked)
         else:
             pass
 
@@ -79,9 +80,13 @@ class CircleDetector():
 
             rospy.loginfo(f"Detected {len(circles)} circles")
 
-        # 表示（必要ならコメントアウト解除）
-        cv2.imshow("Detected Circles", cv_image)
-        cv2.waitKey(1)
+        # publish
+        circle_image_msg = self.bridge.cv2_to_imgmsg(cv_image, encoding="bgr8")
+        self.pub_circle_image.publish(circle_image_msg)
+
+        # 表示
+        # cv2.imshow("Detected Circles", cv_image)
+        # cv2.waitKey(1)
 
 
 if __name__ == "__main__":
