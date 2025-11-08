@@ -40,6 +40,7 @@ install(DIRECTORY config plugins launch
 
 install(PROGRAMS
   scripts/approach.py
+  scripts/approach_target.py
   scripts/get_tf.py
   scripts/move_end_effector.py
   scripts/bridging_main.py
