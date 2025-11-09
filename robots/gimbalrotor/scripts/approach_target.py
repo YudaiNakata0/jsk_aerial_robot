@@ -40,5 +40,8 @@ class ImageBaseApproach():
 
 if __name__ == "__main__":
     rospy.init_node("navigation_node")
-    navigator = ImageBaseApproach(x=650, y=410, c=0.0001)
+    x = rospy.get_param("~ee_x", 650)
+    y = rospy.get_param("~ee_y", 410)
+    c = rospy.get_param("~coef", 0.0001)
+    navigator = ImageBaseApproach(x=x, y=y, c=c)
     rospy.spin()
