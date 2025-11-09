@@ -2,6 +2,7 @@
 
 import rospy
 from sensor_msgs.msg import Image
+from geometry_msgs.msg import Vector3
 from cv_bridge import CvBridge
 import cv2
 import os
@@ -26,6 +27,7 @@ class ROITracker():
         self.max_val = 0.0
         self.min_loc = [0.0, 0.0]
         self.max_loc = [0.0, 0.0]
+        self.center = [0.0, 0.0]
 
         self.score = 0.0
         self.template_width = 0.0
@@ -35,6 +37,7 @@ class ROITracker():
         
     def setup_ros(self):
         self.sub_image = rospy.Subscriber(self.image_topic, Image, self.callback)
+        self.pub_result = rospy.Publisher("/target/2D_position", Vector3, queue_size=1)
 
     def callback(self, msg):
         self.input_image(msg)
@@ -44,6 +47,7 @@ class ROITracker():
         if self.score > 0.8:
             self.draw_result()
             print("Found target")
+            self.publish_center()
         else:
             print("No matched area")
 
@@ -62,6 +66,8 @@ class ROITracker():
         self.result = cv2.matchTemplate(self.frame, self.roi_image, cv2.TM_CCOEFF_NORMED)
         self.min_val, self.max_val, self.min_loc, self.max_loc = cv2.minMaxLoc(self.result)
         self.score = self.max_val
+        self.center[0] = self.max_loc[0] + 0.5*self.template_width
+        self.center[1] = self.max_loc[1] + 0.5*self.template_height
 
     def draw_result(self):
         self.top_left = self.max_loc
@@ -71,6 +77,12 @@ class ROITracker():
         cv2.imshow("tracking result", self.frame)
         cv2.waitKey(1)
 
+    def publish_center(self):
+        msg = Vector3()
+        msg.x = self.center[0]
+        msg.y = self.center[1]
+        self.pub_result.publish(msg)
+        
 if __name__ == '__main__':
     rospy.init_node("tracker_node")
     topic_name = rospy.get_param("~topic", "/usb_cam/image_raw")
