@@ -18,7 +18,7 @@ class CircleDetector():
 
     def setup_ros(self):
         self.sub_image = rospy.Subscriber(self.topic, Image, self.callback)
-        self.pub_circle = rospy.Publisher("/target/circle", Vector3, queue_size=1)
+        self.pub_circle = rospy.Publisher("/target/2D_position", Vector3, queue_size=1)
         self.pub_circle_image = rospy.Publisher("/processed_image/circle", Image, queue_size=1)
 
     # サンプル画像（白黒）の読み込み

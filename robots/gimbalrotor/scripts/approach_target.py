@@ -16,7 +16,7 @@ class ImageBaseApproach():
         self.nav_coefficient = c
         
     def setup_ros(self):
-        self.sub_target = rospy.Subscriber("/target/circle", Vector3, self.callback)
+        self.sub_target_circle = rospy.Subscriber("/target/2D_position", Vector3, self.callback)
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
 
     def callback(self, msg):
