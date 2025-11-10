@@ -33,7 +33,7 @@
     <include>
       <uri>model://wall</uri>
       <name>wall_1</name>
-      <pose>0 0 0 0 0 0</pose>
+      <pose>1 0 0 0 0 0</pose>
     </include>
     
   </world>
