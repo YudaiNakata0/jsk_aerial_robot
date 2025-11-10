@@ -109,15 +109,24 @@ catkin_package(
 #  DEPENDS system_lib
 )
 
-###########
-## Build ##
-###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-include_directories(
-# include
-  ${catkin_INCLUDE_DIRS}
+install(PROGRAMS
+  src/line_detection.py
+  src/get_points.py
+  src/generate_mask_from_file.py
+  src/circle_detection.py
+  src/check_image.py
+  src/red_detection.py
+  src/camera_red_detection.py
+  src/line_detection_random.py
+  src/mask.py
+  src/color_judge.py
+  src/edge_detection.py
+  src/tracker.py
+  src/optical_flow.py
+  src/optical_flow_feature.py
+  src/feature_track.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## Declare a C++ library
