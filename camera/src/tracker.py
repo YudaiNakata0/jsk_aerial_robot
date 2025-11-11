@@ -9,17 +9,18 @@ import os
 import numpy as np
 
 class ROITracker():
-    def __init__(self, topic, path):
+    def __init__(self, topic, path, thres):
         self.bridge = CvBridge()
-        self.setup_parameters(topic, path)
+        self.setup_parameters(topic, path, thres)
         self.setup_ros()
 
-    def setup_parameters(self ,topic, path):
+    def setup_parameters(self ,topic, path, thres):
         self.image_topic = topic
         self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
         if self.ref_image is None:
             rospy.logerr("cannot read template image")
 
+        self.threshold = thres
         self.roi_image = []
         self.frame = []
         self.result = []
@@ -44,7 +45,7 @@ class ROITracker():
         self.set_ROI()
         self.matching()
         print("score: " + str(self.score))
-        if self.score > 0.8:
+        if self.score > self.threshold:
             self.draw_result()
             print("Found target")
             self.publish_center()
@@ -88,8 +89,9 @@ if __name__ == '__main__':
     topic_name = rospy.get_param("~topic", "/usb_cam/image_raw")
     path = rospy.get_param("~path", "~/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/camera/src/image/roi_ref.png")
     path = os.path.expanduser(path)
+    thres = rospy.get_param("~thres", 0.8)
     try:
-        ROITracker(topic=topic_name, path=path)
+        ROITracker(topic=topic_name, path=path, thres=thres)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
