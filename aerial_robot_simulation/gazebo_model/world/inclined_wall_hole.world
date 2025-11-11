@@ -1,0 +1,122 @@
+<?xml version="1.0"?>
+<sdf version="1.6">
+  <world name="default">
+    <!-- physics engine -->
+    <physics type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+      <magnetic_field>34 0 -36</magnetic_field>
+      <gravity>0 0 -9.8</gravity>
+    </physics>
+
+    <!-- coordinate -->
+    <spherical_coordinates>
+      <surface_model>EARTH_WGS84</surface_model>
+      <latitude_deg>0</latitude_deg>
+      <longitude_deg>0</longitude_deg>
+      <elevation>0</elevation>
+      <heading_deg>0</heading_deg>
+    </spherical_coordinates>
+
+    <!-- A global light source -->
+    <scene>
+      <sky>
+        <clouds>
+          <speed>12</speed>
+        </clouds>
+      </sky>
+    </scene>
+    
+    <!-- ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    
+    <!-- sun -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    
+    <!-- wall -->
+    <include>
+      <uri>model://wall_hole</uri>
+      <name>wall_1</name>
+      <pose>2.0 0.5 0 2.09 0 -1.57</pose>
+    </include>
+
+    <!-- light -->
+    <light name="additional_light_x" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+    
+    <light name="additional_light_x_2" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+    
+    <light name="additional_light_-x" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_y" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 1.0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_-y" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 -1.0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_-z" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 0 -1.0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+    
+  </world>
+</sdf>
