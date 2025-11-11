@@ -18,6 +18,15 @@
       <elevation>0</elevation>
       <heading_deg>0</heading_deg>
     </spherical_coordinates>
+
+    <!-- A global light source -->
+    <scene>
+      <sky>
+        <clouds>
+          <speed>12</speed>
+        </clouds>
+      </sky>
+    </scene>
     
     <!-- ground plane -->
     <include>
@@ -35,6 +44,79 @@
       <name>wall_1</name>
       <pose>1.0 0.5 0 1.57 0 -1.57</pose>
     </include>
+
+    <!-- light -->
+    <light name="additional_light_x" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+    
+    <light name="additional_light_x_2" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+    
+    <light name="additional_light_-x" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>-1.0 0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_y" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 1.0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_-y" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 -1.0 0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
+
+    <light name="additional_light_-z" type="directional">
+      <diffuse>1.0 1.0 1.0 1</diffuse>
+      <specular>0.1 0.1 0.1 1</specular>
+      <direction>0 0 -1.0</direction>
+      <attenuation>
+	<range>100</range>
+	<constant>0.9</constant>
+	<linear>0.01</linear>
+	<quadratic>0.001</quadratic>
+      </attenuation>
+    </light>
     
   </world>
 </sdf>
