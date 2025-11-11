@@ -2,6 +2,31 @@
 <robot
     xmlns:xacro="http://www.ros.org/wiki/xacro" name="gimbalrotor_link" >
 
+  <xacro:macro name="dummy_collision_link" params="name parent s_xyz o_xyz rpy j_xyz j_rpy">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.00001"/>
+        <inertia
+            ixx="0.000001" ixy="0.0" ixz="0.0"
+            iyy="0.000001" iyz="0.0"
+            izz="0.000001"/>
+      </inertial>
+      <collision>
+        <origin xyz="${o_xyz}" rpy="${rpy}"/>
+        <geometry>
+          <box size="${s_xyz}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent}"/>
+      <child link="${name}"/>
+      <origin xyz="${j_xyz}" rpy="${j_rpy}"/>
+    </joint>
+  </xacro:macro>
+  
   <xacro:macro name="gimbalrotor_center_link" params="child1 child2 child3 child4">
     ## dummy
     <link name="root">
@@ -78,9 +103,9 @@
             izz="0.000001"/>
       </inertial>
       <collision>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <origin xyz="-0.0815 0 0" rpy="0 0 0"/>
         <geometry>
-          <box size="0.018 0.018 0.163"/>
+          <box size="0.163 0.018 0.018"/>
         </geometry>
       </collision>
     </link>
@@ -91,6 +116,12 @@
       <axis xyz="0 0 1"/>
     </joint>
 
+    ## collision roller
+    <xacro:dummy_collision_link name="col_roller_up_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.239" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_up_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.239" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_bottom_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.003" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_bottom_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.003" j_rpy="0 0 0"/>
+    
     ## camera
     <link name="aerial_robot_camera_frame">
       <inertial>
