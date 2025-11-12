@@ -16,9 +16,6 @@ class ROITracker():
 
     def setup_parameters(self ,topic, path, thres):
         self.image_topic = topic
-        self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
-        if self.ref_image is None:
-            rospy.logerr("cannot read template image")
 
         self.threshold = thres
         self.roi_image = []
@@ -35,6 +32,12 @@ class ROITracker():
         self.template_height = 0.0
         self.top_left = [0.0, 0.0]
         self.bottom_right = [0.0, 0.0]
+
+        self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
+        if self.ref_image is None:
+            rospy.logerr("cannot read template image")
+        else:
+            self.set_ROI(self.ref_image)
         
     def setup_ros(self):
         self.sub_image = rospy.Subscriber(self.image_topic, Image, self.callback)
@@ -42,13 +45,15 @@ class ROITracker():
 
     def callback(self, msg):
         self.input_image(msg)
-        self.set_ROI()
         self.matching()
         print("score: " + str(self.score))
         if self.score > self.threshold:
             self.draw_result()
             print("Found target")
             self.publish_center()
+            self.set_ROI(self.next_roi)
+            cv2.imshow("updated ROI", self.next_roi)
+            cv2.waitKey(1)
         else:
             print("No matched area")
 
@@ -59,9 +64,12 @@ class ROITracker():
             rospy.logerr("conversio error: %s", str(e))
             return
 
-    def set_ROI(self):
-        self.roi_image = self.ref_image
-        self.template_width, self.template_height = self.roi_image.shape[1], self.roi_image.shape[0]
+    def set_ROI(self, ref_image):
+        if ref_image is None:
+            return
+        else:
+            self.roi_image = ref_image
+            self.template_width, self.template_height = self.roi_image.shape[1], self.roi_image.shape[0]
         
     def matching(self):
         self.result = cv2.matchTemplate(self.frame, self.roi_image, cv2.TM_CCOEFF_NORMED)
@@ -69,6 +77,7 @@ class ROITracker():
         self.score = self.max_val
         self.center[0] = self.max_loc[0] + 0.5*self.template_width
         self.center[1] = self.max_loc[1] + 0.5*self.template_height
+        self.next_roi = self.frame[self.max_loc[1]:self.max_loc[1]+self.template_height, self.max_loc[0]:self.max_loc[0]+self.template_width].copy()
 
     def draw_result(self):
         self.top_left = self.max_loc
