@@ -2,7 +2,7 @@
 <robot
     xmlns:xacro="http://www.ros.org/wiki/xacro" name="gimbalrotor_link" >
 
-  <xacro:macro name="dummy_collision_link" params="name parent s_xyz o_xyz rpy j_xyz j_rpy">
+  <xacro:macro name="dummy_collision_link" params="name parent r o_xyz rpy j_xyz j_rpy">
     <link name="${name}">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -15,7 +15,8 @@
       <collision>
         <origin xyz="${o_xyz}" rpy="${rpy}"/>
         <geometry>
-          <box size="${s_xyz}"/>
+          <!-- <box size="${s_xyz}"/> -->
+	  <sphere radius="${r}"/>
         </geometry>
       </collision>
     </link>
@@ -25,6 +26,13 @@
       <child link="${name}"/>
       <origin xyz="${j_xyz}" rpy="${j_rpy}"/>
     </joint>
+    
+    <gazebo reference="${name}">
+      <mu1>0.01</mu1>
+      <mu2>0.01</mu2>
+      <slip1>0.1</slip1>
+      <slip2>0.1</slip2>
+    </gazebo>
   </xacro:macro>
   
   <xacro:macro name="gimbalrotor_center_link" params="child1 child2 child3 child4">
@@ -117,10 +125,14 @@
     </joint>
 
     ## collision roller
-    <xacro:dummy_collision_link name="col_roller_up_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.239" j_rpy="0 0 0"/>
-    <xacro:dummy_collision_link name="col_roller_up_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.239" j_rpy="0 0 0"/>
-    <xacro:dummy_collision_link name="col_roller_bottom_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.003" j_rpy="0 0 0"/>
-    <xacro:dummy_collision_link name="col_roller_bottom_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.003" j_rpy="0 0 0"/>
+    <!-- <xacro:dummy_collision_link name="col_roller_up_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.239" j_rpy="0 0 0"/> -->
+    <!-- <xacro:dummy_collision_link name="col_roller_up_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.239" j_rpy="0 0 0"/> -->
+    <!-- <xacro:dummy_collision_link name="col_roller_bottom_left" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.003" j_rpy="0 0 0"/> -->
+    <!-- <xacro:dummy_collision_link name="col_roller_bottom_right" parent="base_link" s_xyz="0.084 0.01 0.01" o_xyz="-0.042 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.003" j_rpy="0 0 0"/> -->
+    <xacro:dummy_collision_link name="col_roller_up_left" parent="base_link" r="0.005" o_xyz="0 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.239" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_up_right" parent="base_link" r="0.005" o_xyz="0 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.239" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_bottom_left" parent="base_link" r="0.005" o_xyz="0 0 0" rpy="0 0 0" j_xyz="0.332 -0.06 0.003" j_rpy="0 0 0"/>
+    <xacro:dummy_collision_link name="col_roller_bottom_right" parent="base_link" r="0.005" o_xyz="0 0 0" rpy="0 0 0" j_xyz="0.332 0.06 0.003" j_rpy="0 0 0"/>
     
     ## camera
     <link name="aerial_robot_camera_frame">
