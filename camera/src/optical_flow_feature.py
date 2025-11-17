@@ -31,6 +31,11 @@ class OpticalFlowTracker:
         # ROS購読設定
         rospy.Subscriber(self.topic, Image, self.callback)
 
+        # マウスクリックで特徴点設定
+        # cv2.namedWindow("Optical Flow (ROS)")
+        # cv2.setMouseCallback("Optical Flow (ROS)", self.mouse_callback)
+        self.click_points = []
+
     def callback(self, msg):
         """画像トピックを受け取って処理"""
         frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
@@ -38,8 +43,11 @@ class OpticalFlowTracker:
 
         # 初回フレームまたは特徴点なしのとき
         if self.prev_gray is None or self.prev_points is None:
+            # マウスクリックで特徴点設定
+            cv2.namedWindow("Optical Flow (ROS)")
+            cv2.setMouseCallback("Optical Flow (ROS)", self.mouse_callback)
             self.prev_gray = gray
-            self.prev_points = cv2.goodFeaturesToTrack(gray, mask=None, **self.feature_params)
+            # self.prev_points = cv2.goodFeaturesToTrack(gray, mask=None, **self.feature_params)
             self.mask = np.zeros_like(frame)
             return
 
@@ -78,6 +86,14 @@ class OpticalFlowTracker:
         self.prev_gray = gray
         if next_points is not None:
             self.prev_points = good_new.reshape(-1, 1, 2)
+
+    def mouse_callback(self, event, x, y, flags, param):
+        """マウスクリックで特徴点を追加"""
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.click_points.append([[x, y]])
+            rospy.loginfo(f"クリック追加: ({x}, {y})")
+            # numpy配列に変換（OpenCVが扱える形式に
+            self.prev_points = np.array(self.click_points, dtype=np.float32)
 
     def run(self):
         """ROSスピン開始"""
