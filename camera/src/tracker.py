@@ -19,7 +19,7 @@ class ROITracker():
 
         self.threshold = thres
         self.roi_image = []
-        self.frame = []
+        self.frame = None
         self.result = []
         self.min_val = 0.0
         self.max_val = 0.0
@@ -34,28 +34,64 @@ class ROITracker():
         self.bottom_right = [0.0, 0.0]
 
         self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
-        if self.ref_image is None:
+        if self.ref_image is False:
             rospy.logerr("cannot read template image")
         else:
             self.set_ROI(self.ref_image)
+        self.is_ROI_set = False
+        rospy.loginfo("Started terget tracking. Waiting for selecting ROI...")
         
     def setup_ros(self):
         self.sub_image = rospy.Subscriber(self.image_topic, Image, self.callback)
         self.pub_result = rospy.Publisher("/target/2D_position", Vector3, queue_size=1)
 
+    def generate_ROI_loop(self):
+        if self.frame is not None and not self.is_ROI_set:
+            cv2.imshow("Select ROI", self.frame)
+            cv2.waitKey(1)
+            
+            roi = cv2.selectROI("Select ROI", self.frame, False)
+            cv2.destroyWindow("Select ROI")
+            
+            x, y, w, h = map(int, roi)
+            self.set_ROI(self.frame[y:y+h, x:x+w])
+            tracker.is_ROI_set = True
+        
     def callback(self, msg):
         self.input_image(msg)
+
+        if not self.is_ROI_set:
+            cv2.imshow("tracking result", self.frame)
+            cv2.waitKey(1)
+            return
+        # if not self.is_ROI_set:
+        #     roi = cv2.selectROI("Select ROI", self.frame, fromCenter=False)
+        #     x, y, w, h = map(int, roi)
+        #     if w == 0 or h == 0:
+        #         print("select ROI")
+        #         cv2.imshow("tracking result", self.frame)
+        #         cv2.waitKey(1)
+        #         return
+        #     else:
+        #         roi_image = self.frame[y:y+h, x:x+w].copy()
+        #         self.set_ROI(roi_image)
+        #         self.is_ROI_set = True
+        #         cv2.imshow("ROI", self.next_roi)
+        #         cv2.waitKey(1)
+                
         self.matching()
         print("score: " + str(self.score))
         if self.score > self.threshold:
             self.draw_result()
             print("Found target")
             self.publish_center()
-            self.set_ROI(self.next_roi)
-            cv2.imshow("updated ROI", self.next_roi)
-            cv2.waitKey(1)
+            # self.set_ROI(self.next_roi)
+            # cv2.imshow("ROI", self.next_roi)
+            # cv2.waitKey(1)
         else:
             print("No matched area")
+            cv2.imshow("tracking result", self.frame)
+            cv2.waitKey(1)
 
     def input_image(self, msg):
         try:
@@ -100,8 +136,10 @@ if __name__ == '__main__':
     path = os.path.expanduser(path)
     thres = rospy.get_param("~thres", 0.8)
     try:
-        ROITracker(topic=topic_name, path=path, thres=thres)
-        rospy.spin()
+        tracker = ROITracker(topic=topic_name, path=path, thres=thres)
+        while not rospy.is_shutdown():
+            tracker.generate_ROI_loop()
+            rospy.spin()
     except rospy.ROSInterruptException:
         pass
     cv2.destroyAllWindows()
