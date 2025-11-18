@@ -101,4 +101,5 @@
     <arg name="spawn_yaw" value="$(arg spawn_yaw)" />
   </include>
 
+  <node pkg="gimbalrotor" type="get_tf.py" name="get_tf_node" />
 </launch>
