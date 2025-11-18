@@ -9,12 +9,12 @@ import os
 import numpy as np
 
 class ROITracker():
-    def __init__(self, topic, path, thres):
+    def __init__(self, topic, path, thres, flag):
         self.bridge = CvBridge()
-        self.setup_parameters(topic, path, thres)
+        self.setup_parameters(topic, path, thres, flag)
         self.setup_ros()
 
-    def setup_parameters(self ,topic, path, thres):
+    def setup_parameters(self, topic, path, thres, flag):
         self.image_topic = topic
 
         self.threshold = thres
@@ -33,12 +33,15 @@ class ROITracker():
         self.top_left = [0.0, 0.0]
         self.bottom_right = [0.0, 0.0]
 
-        self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
-        if self.ref_image is False:
-            rospy.logerr("cannot read template image")
-        else:
-            self.set_ROI(self.ref_image)
         self.is_ROI_set = False
+        self.read_roi_file_flag = flag
+        if self.read_roi_file_flag:
+            self.ref_image = cv2.imread(path, cv2.IMREAD_COLOR)
+            if self.ref_image is False:
+                rospy.logerr("cannot read template image")
+            else:
+                self.set_ROI(self.ref_image)
+                
         rospy.loginfo("Started terget tracking. Waiting for selecting ROI...")
         
     def setup_ros(self):
@@ -135,8 +138,9 @@ if __name__ == '__main__':
     path = rospy.get_param("~path", "~/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/camera/src/image/roi_ref.png")
     path = os.path.expanduser(path)
     thres = rospy.get_param("~thres", 0.8)
+    read_roi_file_flag = rospy.get_param("~flag", True)
     try:
-        tracker = ROITracker(topic=topic_name, path=path, thres=thres)
+        tracker = ROITracker(topic=topic_name, path=path, thres=thres, flag=read_roi_file_flag)
         while not rospy.is_shutdown():
             tracker.generate_ROI_loop()
             rospy.spin()

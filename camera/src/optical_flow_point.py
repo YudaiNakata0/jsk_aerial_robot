@@ -23,6 +23,7 @@ class OpticalFlowTracker:
         self.prev_points = None
         self.mask = None
         self.is_window_created = False
+        self.is_optical_flow_valid = True
 
         self.click_points = []
 
