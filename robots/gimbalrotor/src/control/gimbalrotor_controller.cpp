@@ -445,6 +445,7 @@ void GimbalrotorController::ExtWrenchControl(){
 	       offset_external_wrench_(4),
 	       offset_external_wrench_(5));
       offset_record_flag_ = true;
+      desire_wrench_ -= offset_external_wrench_;
       }
   }
 
