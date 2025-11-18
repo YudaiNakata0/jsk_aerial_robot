@@ -2,6 +2,7 @@
 import rospy
 from aerial_robot_msgs.msg import FlightNav
 from geometry_msgs.msg import Vector3, Pose, PoseStamped
+from nav_msgs.msg import Odometry
 
 class ImageBaseApproach():
     def __init__(self, x, y, c):
@@ -19,10 +20,11 @@ class ImageBaseApproach():
         self.endeffector_pose = Pose()
         self.endeffector_goal_pose = Pose()
         self.is_cog_goal_record = False
+        self.cog_target_msg = PoseStamped()
         
     def setup_ros(self):
         self.sub_target_circle = rospy.Subscriber("/target/2D_position", Vector3, self.callback)
-        self.sub_endeffector = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Pose, self.cb_record_cog_pose)
+        self.sub_endeffector = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_record_cog_pose)
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/endeffector_pose", Pose, self.cb_record_endeffector_pose)
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
@@ -33,10 +35,11 @@ class ImageBaseApproach():
         error_xi = self.target_xi - self.endeffector_xi
         error_yi = self.target_yi - self.endeffector_yi
         error_di2 = error_xi**2 + error_yi**2
-        if error_di2 < 10:
+        if error_di2 < 400:
             print("approached successfully")
             self.cog_goal_pose = self.cog_pose
             self.endeffector_goal_pose = self.endeffector_pose
+            self.cog_target_msg.pose = self.cog_goal_pose
             self.is_cog_goal_record = True
         else:
             nav_y = -error_xi * self.nav_coefficient
@@ -53,10 +56,16 @@ class ImageBaseApproach():
         self.pub_nav.publish(pub_msg)
         
     def cb_record_cog_pose(self, msg):
-        self.cog_pose = msg
+        self.cog_pose = msg.pose.pose
         
     def cb_record_endeffector_pose(self, msg):
         self.endeffector_pose = msg
+
+    def publish_cog_target(self):
+        if self.is_cog_goal_record:
+            if self.cog_target_msg.pose.position.z > 1.0:
+                self.pub_cog.publish(self.cog_target_msg)
+                print("published cog pose")
 
 if __name__ == "__main__":
     rospy.init_node("navigation_node")
@@ -64,4 +73,8 @@ if __name__ == "__main__":
     y = rospy.get_param("~ee_y", 410)
     c = rospy.get_param("~coef", 0.0001)
     navigator = ImageBaseApproach(x=x, y=y, c=c)
+    r = rospy.Rate(0.5)
+    while not rospy.is_shutdown():
+        navigator.publish_cog_target()
+        r.sleep()
     rospy.spin()
