@@ -16,6 +16,7 @@ q: reset mode
 [: +0.1
 ]: -0.1
 p: publish
+@: publish flags
 """
 
 def get_key():
@@ -65,6 +66,7 @@ def main():
                 msg_f2.data = True
                 pub_flag_1.publish(msg_f1)
                 pub_flag_2.publish(msg_f2)
+                print("publish: send_feedforward_switch_flag, attaching_flag")
                 
             if key == "x":
                 mode = 1
