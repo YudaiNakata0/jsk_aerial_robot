@@ -17,9 +17,13 @@
     <param name="upperb_saturation" value="$(arg upperb_saturation)"/>
   </node>
 
-  <node pkg="camera" type="get_points.py" name="detect_target_node"/>
+  <!-- target calculator -->
+  <node pkg="camera" type="get_points.py" name="detect_target_node" output="screen"/>
 
   <!-- image viewer -->
   <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
+
+  <!-- navigator -->
+  <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node"/>
   
 </launch>
