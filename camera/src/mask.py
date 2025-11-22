@@ -7,10 +7,11 @@ import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
 
 class MaskGenerator():
-    def __init__(self,lh,uh,ll,ul,ls,us):
+    def __init__(self,lh,uh,ll,ul,ls,us,topic):
         self.time = rospy.get_time()
         self.bridge = CvBridge()
         self.setup_hls_param(lh, uh, ll, ul, ls, us)
+        self.topic = topic
         self.image = Image()
         self.image_hls = Image()
 
@@ -27,7 +28,7 @@ class MaskGenerator():
         print("upperb: "+str(uh)+","+str(ul)+","+str(us))
 
     def setup_ros(self):
-        self.sub_raw = rospy.Subscriber("/usb_cam/image_raw/compressed", CompressedImage, self.callback)
+        self.sub_raw = rospy.Subscriber(self.topic, CompressedImage, self.callback)
         self.pub_mask = rospy.Publisher("/processed_image/mask", Image, queue_size=1)
         self.pub_mask_cleaned = rospy.Publisher("/processed_image/mask_cleaned", Image, queue_size=1)
         self.pub_filtered_mask = rospy.Publisher("/processed_image/filtered_mask", Image, queue_size=1)
@@ -87,8 +88,9 @@ if __name__ == "__main__":
     ul = rospy.get_param("/generate_mask_node/upperb_luminance", 50)
     ls = rospy.get_param("/generate_mask_node/lowerb_saturation", 0)
     us = rospy.get_param("/generate_mask_node/upperb_saturation", 255)
+    topic = rospy.get_param("/generate_mask_node/topic", "/usb_cam/image_raw/compressed")
 
-    generator = MaskGenerator(lh, uh, ll, ul, ls, us)
+    generator = MaskGenerator(lh, uh, ll, ul, ls, us, topic)
     try:
         rospy.spin()
     except KeyboardInterrupt:

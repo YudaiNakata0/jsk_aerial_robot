@@ -9,6 +9,7 @@
   <arg name="endeffector_x" default="650"/>
   <arg name="endeffector_y" default="410"/>
   <arg name="coefficient" default="0.0001"/>
+  <arg name="sim" default="False"/>
 
   <!-- generate mask -->
   <node pkg="camera" type="mask.py" name="generate_mask_node">
@@ -18,6 +19,7 @@
     <param name="upperb_luminance" value="$(arg upperb_luminance)"/>
     <param name="lowerb_saturation" value="$(arg lowerb_saturation)"/>
     <param name="upperb_saturation" value="$(arg upperb_saturation)"/>
+    <param name="topic" value="/gimbalrotor/usb_cam/image_raw/compressed" if="$(arg sim)"/>
   </node>
 
   <!-- target calculator -->
