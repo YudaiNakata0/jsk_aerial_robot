@@ -3,6 +3,7 @@ import rospy
 from aerial_robot_msgs.msg import FlightNav
 from geometry_msgs.msg import Vector3, Pose, PoseStamped
 from nav_msgs.msg import Odometry
+from std_msgs.msg import Empty
 
 class ImageBaseApproach():
     def __init__(self, x, y, c):
@@ -20,6 +21,7 @@ class ImageBaseApproach():
         self.endeffector_pose = Pose()
         self.endeffector_goal_pose = Pose()
         self.is_cog_goal_record = False
+        self.is_extruding = False
         self.cog_target_msg = PoseStamped()
         
     def setup_ros(self):
@@ -28,6 +30,7 @@ class ImageBaseApproach():
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/endeffector_pose", Pose, self.cb_record_endeffector_pose)
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
+        self.pub_extrusion = rospy.Publisher("/set_gpio", Empty, queue_size=1)
 
     def callback(self, msg):
         self.target_xi = msg.x
@@ -41,6 +44,10 @@ class ImageBaseApproach():
             self.endeffector_goal_pose = self.endeffector_pose
             self.cog_target_msg.pose = self.cog_goal_pose
             self.is_cog_goal_record = True
+            if not self.is_extruding:
+                msg = Empty()
+                self.pub_extrusion.publish(msg)
+                self.is_extruding = True
         else:
             nav_y = -error_xi * self.nav_coefficient
             nav_z = -error_yi * self.nav_coefficient
@@ -72,9 +79,10 @@ if __name__ == "__main__":
     x = rospy.get_param("~ee_x", 650)
     y = rospy.get_param("~ee_y", 410)
     c = rospy.get_param("~coef", 0.0001)
+    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], coefficient:{c}")
     navigator = ImageBaseApproach(x=x, y=y, c=c)
     r = rospy.Rate(0.5)
-    while not rospy.is_shutdown():
-        navigator.publish_cog_target()
-        r.sleep()
+    # while not rospy.is_shutdown():
+    #     navigator.publish_cog_target()
+    #     r.sleep()
     rospy.spin()
