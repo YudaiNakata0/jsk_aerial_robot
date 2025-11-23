@@ -32,27 +32,35 @@ class ImageBaseApproach():
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
         self.pub_extrusion = rospy.Publisher("/set_gpio", Empty, queue_size=1)
 
+    # カメラ画像を受け取ったとき
     def callback(self, msg):
         self.target_xi = msg.x
         self.target_yi = msg.y
         error_xi = self.target_xi - self.endeffector_xi
         error_yi = self.target_yi - self.endeffector_yi
         error_di2 = error_xi**2 + error_yi**2
+
+        # 目標位置とエンドエフェクタ位置が近いとき
         if error_di2 < 400:
             print("approached successfully")
+            # エンドエフェクタと重心の位置姿勢を記録
             self.cog_goal_pose = self.cog_pose
             self.endeffector_goal_pose = self.endeffector_pose
             self.cog_target_msg.pose = self.cog_goal_pose
             self.is_cog_goal_record = True
+            # 射出トリガを送信
             if not self.is_extruding:
                 msg = Empty()
                 self.pub_extrusion.publish(msg)
                 self.is_extruding = True
+
+        # 目標速度を計算　*カメラ画像内の軸と実際の軸は逆
         else:
             nav_y = -error_xi * self.nav_coefficient
             nav_z = -error_yi * self.nav_coefficient
             self.publish(nav_y, nav_z)
 
+    # ROSトピック送信（速度制御モード）
     def publish(self, nav_y, nav_z):
         pub_msg = FlightNav()
         pub_msg.pos_xy_nav_mode = FlightNav.VEL_MODE
@@ -61,13 +69,16 @@ class ImageBaseApproach():
         pub_msg.target_vel_z = nav_z
         rospy.loginfo("publish message to uav/nav: %s, %s", nav_y, nav_z)
         self.pub_nav.publish(pub_msg)
-        
+
+    # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
         self.cog_pose = msg.pose.pose
-        
+
+    # エンドエフェクタ位置姿勢取得
     def cb_record_endeffector_pose(self, msg):
         self.endeffector_pose = msg
 
+    # 記録した重心の位置に移動
     def publish_cog_target(self):
         if self.is_cog_goal_record:
             if self.cog_target_msg.pose.position.z > 1.0:
