@@ -35,18 +35,21 @@ class GetTarget():
         print(self.number_of_points)
 
     def calculate_center(self):
+        pub_coords_msg = Vector3()
         if self.number_of_points < 1000:
             print("No sufficient points.")
+            pub_coords_msg.z = 1
             return
-        center = np.mean(self.points, axis=0)
-        print(center)
-        center_image = cv2.cvtColor(self.mono, cv2.COLOR_GRAY2RGB)
-        cv2.circle(center_image, (int(center[0]), int(center[1])), 5, (0, 255, 0), -1)
-        pub_msg = self.bridge.cv2_to_imgmsg(center_image, encoding="bgr8")
-        self.pub_center_image.publish(pub_msg)
-        pub_coords_msg = Vector3()
-        pub_coords_msg.x = center[0]
-        pub_coords_msg.y = center[1]
+        else:
+            center = np.mean(self.points, axis=0)
+            print(center)
+            center_image = cv2.cvtColor(self.mono, cv2.COLOR_GRAY2RGB)
+            cv2.circle(center_image, (int(center[0]), int(center[1])), 5, (0, 255, 0), -1)
+            pub_msg = self.bridge.cv2_to_imgmsg(center_image, encoding="bgr8")
+            self.pub_center_image.publish(pub_msg)
+            
+            pub_coords_msg.x = center[0]
+            pub_coords_msg.y = center[1]
         self.pub_center_coords.publish(pub_coords_msg)
     
 if __name__ == "__main__":
