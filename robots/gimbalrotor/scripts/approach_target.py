@@ -6,16 +6,16 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 
 class ImageBaseApproach():
-    def __init__(self, x, y, c):
-        self.setup_parameters(x, y, c)
+    def __init__(self, x, y, kp):
+        self.setup_parameters(x, y, kp)
         self.setup_ros()
 
-    def setup_parameters(self, x, y, c):
+    def setup_parameters(self, x, y, kp):
         self.endeffector_xi = x
         self.endeffector_yi = y
         self.target_xi = 0.0
         self.target_yi = 0.0
-        self.nav_coefficient = c
+        self.kp = kp
         self.cog_pose = Pose()
         self.cog_goal_pose = Pose()
         self.endeffector_pose = Pose()
@@ -23,6 +23,8 @@ class ImageBaseApproach():
         self.is_cog_goal_record = False
         self.is_extruding = False
         self.cog_target_msg = PoseStamped()
+        self.pre_error_xi = 0.0
+        self.pre_error_yi = 0.0
         
     def setup_ros(self):
         self.sub_target_circle = rospy.Subscriber("/target/2D_position", Vector3, self.callback)
@@ -56,9 +58,13 @@ class ImageBaseApproach():
 
         # 目標速度を計算　*カメラ画像内の軸と実際の軸は逆
         else:
-            nav_y = -error_xi * self.nav_coefficient
-            nav_z = -error_yi * self.nav_coefficient
+            nav_y = -self.kp * error_xi
+            nav_z = -self.kp * error_yi
             self.publish(nav_y, nav_z)
+
+        # 位置誤差を記録
+        self.pre_error_xi = error_xi
+        self.pre_error_yi = error_yi
 
     # ROSトピック送信（速度制御モード）
     def publish(self, nav_y, nav_z):
@@ -89,9 +95,9 @@ if __name__ == "__main__":
     rospy.init_node("navigation_node")
     x = rospy.get_param("~ee_x", 650)
     y = rospy.get_param("~ee_y", 410)
-    c = rospy.get_param("~coef", 0.0001)
-    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], coefficient:{c}")
-    navigator = ImageBaseApproach(x=x, y=y, c=c)
+    kp = rospy.get_param("~kp", 0.0001)
+    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], p gain:{c}")
+    navigator = ImageBaseApproach(x=x, y=y, kp=kp)
     r = rospy.Rate(0.5)
     # while not rospy.is_shutdown():
     #     navigator.publish_cog_target()

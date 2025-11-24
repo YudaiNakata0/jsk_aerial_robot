@@ -8,7 +8,7 @@
   <arg name="upperb_saturation" default="255"/>
   <arg name="endeffector_x" default="650"/>
   <arg name="endeffector_y" default="410"/>
-  <arg name="coefficient" default="0.0001"/>
+  <arg name="p_gain" default="0.0001"/>
   <arg name="sim" default="False"/>
 
   <!-- generate mask -->
@@ -32,7 +32,7 @@
   <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen">
     <param name="ee_x" value="$(arg endeffector_x)"/>
     <param name="ee_y" value="$(arg endeffector_y)"/>
-    <param name="coef" value="$(arg coefficient)"/>
+    <param name="kp" value="$(arg p_gain)"/>
   </node>
   
 </launch>
