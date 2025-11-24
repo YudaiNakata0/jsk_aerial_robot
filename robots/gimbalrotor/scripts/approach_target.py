@@ -6,16 +6,17 @@ from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 
 class ImageBaseApproach():
-    def __init__(self, x, y, kp):
-        self.setup_parameters(x, y, kp)
+    def __init__(self, x, y, kp, kd):
+        self.setup_parameters(x, y, kp, kd)
         self.setup_ros()
 
-    def setup_parameters(self, x, y, kp):
+    def setup_parameters(self, x, y, kp, kd):
         self.endeffector_xi = x
         self.endeffector_yi = y
         self.target_xi = 0.0
         self.target_yi = 0.0
         self.kp = kp
+        self.kd = kd
         self.cog_pose = Pose()
         self.cog_goal_pose = Pose()
         self.endeffector_pose = Pose()
@@ -25,6 +26,7 @@ class ImageBaseApproach():
         self.cog_target_msg = PoseStamped()
         self.pre_error_xi = 0.0
         self.pre_error_yi = 0.0
+        self.pre_time = rospy.get_time()
         
     def setup_ros(self):
         self.sub_target_circle = rospy.Subscriber("/target/2D_position", Vector3, self.callback)
@@ -36,11 +38,23 @@ class ImageBaseApproach():
 
     # カメラ画像を受け取ったとき
     def callback(self, msg):
+        if msg.z == 1:
+            if self.is_cog_goal_record:
+                print("cannot catch target; move to recorded goal pose")
+                self.publish_cog_target()
+        
         self.target_xi = msg.x
         self.target_yi = msg.y
+        # 位置誤差（座標、距離）
         error_xi = self.target_xi - self.endeffector_xi
         error_yi = self.target_yi - self.endeffector_yi
         error_di2 = error_xi**2 + error_yi**2
+        # 位置誤差を記録
+        self.pre_error_xi = error_xi
+        self.pre_error_yi = error_yi
+        # 時間差
+        current_time = rospy.get_time()
+        du = current_time - self.pre_time
 
         # 目標位置とエンドエフェクタ位置が近いとき
         if error_di2 < 400:
@@ -58,13 +72,14 @@ class ImageBaseApproach():
 
         # 目標速度を計算　*カメラ画像内の軸と実際の軸は逆
         else:
-            nav_y = -self.kp * error_xi
-            nav_z = -self.kp * error_yi
+            p_y = -self.kp * error_xi
+            p_z = -self.kp * error_yi
+            d_y = -self.kd * (error_xi - self.pre_error_xi) / du
+            d_z = -self.kd * (error_yi - self.pre_error_yi) / du
+            
+            nav_y = p_y + d_y
+            nav_z = p_z + d_z
             self.publish(nav_y, nav_z)
-
-        # 位置誤差を記録
-        self.pre_error_xi = error_xi
-        self.pre_error_yi = error_yi
 
     # ROSトピック送信（速度制御モード）
     def publish(self, nav_y, nav_z):
@@ -87,7 +102,7 @@ class ImageBaseApproach():
     # 記録した重心の位置に移動
     def publish_cog_target(self):
         if self.is_cog_goal_record:
-            if self.cog_target_msg.pose.position.z > 1.0:
+            if self.cog_target_msg.pose.position.z > 0.8:
                 self.pub_cog.publish(self.cog_target_msg)
                 print("published cog pose")
 
@@ -96,8 +111,9 @@ if __name__ == "__main__":
     x = rospy.get_param("~ee_x", 650)
     y = rospy.get_param("~ee_y", 410)
     kp = rospy.get_param("~kp", 0.0001)
-    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], p gain:{c}")
-    navigator = ImageBaseApproach(x=x, y=y, kp=kp)
+    kd = rospy.get_param("~kd", 0.0001)
+    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], p gain:{kp}, d gain:{kd}")
+    navigator = ImageBaseApproach(x=x, y=y, kp=kp, kd=kd)
     r = rospy.Rate(0.5)
     # while not rospy.is_shutdown():
     #     navigator.publish_cog_target()
