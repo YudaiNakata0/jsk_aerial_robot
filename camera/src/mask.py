@@ -69,14 +69,14 @@ class MaskGenerator():
         valid_area_mask = cv2.bitwise_not(cut_area_dilated)
         # print("mask: ", self.mask.shape)
         # print("valid_area_mask: ", valid_area_mask.shape)
-        self.filtered_mask = cv2.bitwise_and(self.mask, valid_area_mask)
+        self.filtered_mask = cv2.bitwise_and(self.mask_cleaned, valid_area_mask)
 
     def publish_mask(self):
         mask_msg = self.bridge.cv2_to_imgmsg(self.mask, encoding="mono8")
         mask_cleaned_msg = self.bridge.cv2_to_imgmsg(self.mask_cleaned, encoding="mono8")
         filtered_mask_msg = self.bridge.cv2_to_imgmsg(self.filtered_mask, encoding="mono8")
-        self.pub_mask.publish(mask_msg)
-        self.pub_mask_cleaned.publish(mask_cleaned_msg)
+        # self.pub_mask.publish(mask_msg)
+        # self.pub_mask_cleaned.publish(mask_cleaned_msg)
         self.pub_filtered_mask.publish(filtered_mask_msg)
 
         
