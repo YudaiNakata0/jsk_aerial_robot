@@ -4,6 +4,8 @@ controller:
   torque_allocation_matrix_inv_pub_interval: 0.05
   wrench_allocation_matrix_pub_interval: 0.1
   gimbal_calc_in_fc : true
+  momentum_observer_force_weight: 5
+  momentum_observer_torque_weight: 5
 
   xy:
     p_gain: 10.0
@@ -26,9 +28,9 @@ controller:
     force_landing_descending_rate: -0.5
 
   roll_pitch:
-    p_gain: 15.0
+    p_gain: 30.0 #15.0
     i_gain: 1.0
-    d_gain: 15.0
+    d_gain: 25.0 #15.0
     limit_sum: 20.0
     limit_p: 20.0
     limit_i: 20.0
