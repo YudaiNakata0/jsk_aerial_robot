@@ -1,29 +1,37 @@
 #!/usr/bin/env python3
 import rospy
-from aerial_robot_msgs.msg import FlightNav
+from aerial_robot_msgs.msg import FlightNav, Pid
 from geometry_msgs.msg import Vector3, Pose, PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
 
 class ImageBaseApproach():
-    def __init__(self, x, y, kp, kd):
-        self.setup_parameters(x, y, kp, kd)
+    def __init__(self, x, y, kp=1e-04, ki=1e-07, kd=1e-04):
+        self.setup_parameters(x, y, kp, kd, ki)
         self.setup_ros()
 
-    def setup_parameters(self, x, y, kp, kd):
+    def setup_parameters(self, x, y, kp, kd, ki):
         self.endeffector_xi = x
         self.endeffector_yi = y
         self.target_xi = 0.0
         self.target_yi = 0.0
+        
         self.kp = kp
+        self.ki = ki
         self.kd = kd
+        self.integral_error_xi = 0.0
+        self.integral_error_yi = 0.0
+        self.limit_i = 5e-02
+        
         self.cog_pose = Pose()
         self.cog_goal_pose = Pose()
         self.endeffector_pose = Pose()
         self.endeffector_goal_pose = Pose()
+        
         self.is_cog_goal_record = False
         self.is_extruding = False
         self.cog_target_msg = PoseStamped()
+        
         self.pre_error_xi = 0.0
         self.pre_error_yi = 0.0
         self.pre_time = rospy.get_time()
@@ -35,6 +43,8 @@ class ImageBaseApproach():
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
         self.pub_extrusion = rospy.Publisher("/set_gpio", Empty, queue_size=1)
+        self.pub_y_pid = rospy.Publisher("/y_pid_term", Pid, queue_size=1)
+        self.pub_z_pid = rospy.Publisher("/z_pid_term", Pid, queue_size=1)
 
     # カメラ画像を受け取ったとき
     def callback(self, msg):
@@ -49,12 +59,13 @@ class ImageBaseApproach():
         error_xi = self.target_xi - self.endeffector_xi
         error_yi = self.target_yi - self.endeffector_yi
         error_di2 = error_xi**2 + error_yi**2
-        # 位置誤差を記録
-        self.pre_error_xi = error_xi
-        self.pre_error_yi = error_yi
         # 時間差
         current_time = rospy.get_time()
         du = current_time - self.pre_time
+        # 誤差積算
+        self.integral_error_xi += error_xi * du
+        self.integral_error_yi += error_yi * du
+        print(f"int_y: {self.integral_error_xi}, int_z: {self.integral_error_yi}")
 
         # 目標位置とエンドエフェクタ位置が近いとき
         if error_di2 < 400:
@@ -74,12 +85,33 @@ class ImageBaseApproach():
         else:
             p_y = -self.kp * error_xi
             p_z = -self.kp * error_yi
+            i_y = -self.ki * self.integral_error_xi
+            i_z = -self.ki * self.integral_error_yi
+            print(f"i_y: {i_y}, i_z: {i_z}")
+            i_y = max(min(i_y, self.limit_i), -self.limit_i)
+            i_z = max(min(i_z, self.limit_i), -self.limit_i)
             d_y = -self.kd * (error_xi - self.pre_error_xi) / du
             d_z = -self.kd * (error_yi - self.pre_error_yi) / du
-            
-            nav_y = p_y + d_y
-            nav_z = p_z + d_z
+            nav_y = p_y + i_y + d_y
+            nav_z = p_z + i_z + d_z
             self.publish(nav_y, nav_z)
+            # pid各項の値を記録
+            pid_msg_y = Pid()
+            pid_msg_y.total = [nav_y]
+            pid_msg_y.p_term = [p_y]
+            pid_msg_y.i_term = [i_y]
+            pid_msg_y.d_term = [d_y]
+            self.pub_y_pid.publish(pid_msg_y)
+            pid_msg_z = Pid()
+            pid_msg_z.total = [nav_z]
+            pid_msg_z.p_term = [p_z]
+            pid_msg_z.i_term = [i_z]
+            pid_msg_z.d_term = [d_z]
+            self.pub_z_pid.publish(pid_msg_z)
+
+        # 位置誤差を記録
+        self.pre_error_xi = error_xi
+        self.pre_error_yi = error_yi
 
     # ROSトピック送信（速度制御モード）
     def publish(self, nav_y, nav_z):
@@ -90,7 +122,7 @@ class ImageBaseApproach():
         pub_msg.target_vel_z = nav_z
         rospy.loginfo("publish message to uav/nav: %s, %s", nav_y, nav_z)
         self.pub_nav.publish(pub_msg)
-
+    
     # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
         self.cog_pose = msg.pose.pose
@@ -110,10 +142,11 @@ if __name__ == "__main__":
     rospy.init_node("navigation_node")
     x = rospy.get_param("~ee_x", 650)
     y = rospy.get_param("~ee_y", 410)
-    kp = rospy.get_param("~kp", 0.0001)
-    kd = rospy.get_param("~kd", 0.0001)
+    kp = rospy.get_param("~kp", 1e-04)
+    ki = rospy.get_param("~ki", 1e-07)
+    kd = rospy.get_param("~kd", 1e-04)
     print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], p gain:{kp}, d gain:{kd}")
-    navigator = ImageBaseApproach(x=x, y=y, kp=kp, kd=kd)
+    navigator = ImageBaseApproach(x=x, y=y, kp=kp, ki=ki, kd=kd)
     r = rospy.Rate(0.5)
     # while not rospy.is_shutdown():
     #     navigator.publish_cog_target()
