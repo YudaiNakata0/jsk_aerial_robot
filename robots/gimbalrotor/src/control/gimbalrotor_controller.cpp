@@ -38,6 +38,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   wrench_error_cog_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("wrench_error_cog", 1);
   attaching_flag_sub_ = nh_.subscribe("attaching_flag", 1, &GimbalrotorController::AttachingFlagCallBack, this);
   send_feedforward_switch_flag_sub_ = nh_.subscribe("send_feedforward_switch_flag", 1, &GimbalrotorController::SendFeedforwardSwitchFlagCallBack, this);
+  xyz_wrench_control_flag_sub_ = nh_.subscribe("xyz_wrench_control_flag", 1, &GimbalrotorController::XYZWrenchControlFlagCallBack, this);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
@@ -48,6 +49,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   p_wrench_stamp_ = Eigen::VectorXd::Zero(6);
   feedforward_sum_ = Eigen::VectorXd::Zero(6);
   attaching_flag_ = false;
+  xyz_wrench_control_flag_ = false;
   const_err_i_flag_ = false;
   first_flag_ = true;
   offset_record_flag_ = false;
@@ -504,6 +506,14 @@ void GimbalrotorController::ExtWrenchControl(){
     // navigator_->setTargetAngAccZ(0);
     feedforward_sum_ = Eigen::VectorXd::Zero(6);
   }
+
+  if(xyz_wrench_control_flag_){
+    navigator_->setXyControlMode(1);
+    navigator_->setTargetAccX(target_acc[0]);
+    navigator_->setTargetAccY(target_acc[1]);
+    navigator_->setTargetAccZ(target_acc[2]);
+  }
+  
   if(pid_controllers_.at(X).result()<0.0)
   {
     //attaching_flag_ = false;
@@ -576,6 +586,11 @@ void GimbalrotorController::AttachingFlagCallBack(std_msgs::Bool msg)
 void GimbalrotorController::SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg)
 {
   send_feedforward_switch_flag_ = msg.data;
+}
+
+void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
+{
+  xyz_wrench_control_flag_ = msg.data;
 }
 
 }  // namespace aerial_robot_control

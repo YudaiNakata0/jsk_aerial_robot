@@ -40,6 +40,7 @@ def main():
     pub = rospy.Publisher("/gimbalrotor/desire_wrench", WrenchStamped, queue_size=1)
     pub_flag_1 = rospy.Publisher("/gimbalrotor/send_feedforward_switch_flag", Bool, queue_size=1)
     pub_flag_2 = rospy.Publisher("/gimbalrotor/attaching_flag", Bool, queue_size=1)
+    pub_flag_3 = rospy.Publisher("/gimbalrotor/xyz_wrench_control_flag", Bool, queue_size=1)
 
     print(msg)
     print("waiting key input... (Ctrl-C to quit)")
@@ -48,6 +49,7 @@ def main():
     msg_w = WrenchStamped()
     msg_f1 = Bool()
     msg_f2 = Bool()
+    msg_f3 = Bool()
 
     rate = rospy.Rate(50)
 
@@ -66,9 +68,12 @@ def main():
             if key == "@":
                 msg_f1.data = True
                 msg_f2.data = True
-                pub_flag_1.publish(msg_f1)
-                pub_flag_2.publish(msg_f2)
-                print("publish: send_feedforward_switch_flag, attaching_flag")
+                msg_f3.data = True
+                # pub_flag_1.publish(msg_f1)
+                # pub_flag_2.publish(msg_f2)
+                # print("publish: send_feedforward_switch_flag, attaching_flag")
+                pub_flag_3.publish(msg_f3)
+                print("publish: xyz_wrench_control_flag")
 
             if key == ",":
                 msg_f1.data = False
@@ -78,7 +83,12 @@ def main():
             if key == ".":
                 msg_f2.data = False
                 pub_flag_2.publish(msg_f2)
-                print("publish: attaching_flag->False")                
+                print("publish: attaching_flag->False")
+
+            if key == "/":
+                msg_f3.data = False
+                pub_flag_3.publish(msg_f3)
+                print("publish: xyz_wrench_control_flag->False")
 
             if key == "x":
                 mode = 1
