@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from aerial_robot_msgs.msg import FlightNav, Pid
+from aerial_robot_msgs.msg import FlightNav, Pid, SimpleFlightNav
 from geometry_msgs.msg import Vector3, Pose, PoseStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty
@@ -41,6 +41,7 @@ class ImageBaseApproach():
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_record_cog_pose)
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/endeffector_pose", Pose, self.cb_record_endeffector_pose)
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
+        self.pub_simple_nav = rospy.Publisher("/gimbalrotor/simple_nav", SimpleFlightNav, queue_size=1)
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
         self.pub_extrusion = rospy.Publisher("/set_gpio", Empty, queue_size=1)
         self.pub_y_pid = rospy.Publisher("/y_pid_term", Pid, queue_size=1)
@@ -92,18 +93,18 @@ class ImageBaseApproach():
             i_z = max(min(i_z, self.limit_i), -self.limit_i)
             d_y = -self.kd * (error_xi - self.pre_error_xi) / du
             d_z = -self.kd * (error_yi - self.pre_error_yi) / du
-            nav_y = p_y + i_y + d_y
-            nav_z = p_z + i_z + d_z
-            self.publish(nav_y, nav_z)
+            v_y = p_y + i_y + d_y
+            v_z = p_z + i_z + d_z
+            self.publish(v_y, v_z)
             # pid各項の値を記録
             pid_msg_y = Pid()
-            pid_msg_y.total = [nav_y]
+            pid_msg_y.total = [v_y]
             pid_msg_y.p_term = [p_y]
             pid_msg_y.i_term = [i_y]
             pid_msg_y.d_term = [d_y]
             self.pub_y_pid.publish(pid_msg_y)
             pid_msg_z = Pid()
-            pid_msg_z.total = [nav_z]
+            pid_msg_z.total = [v_z]
             pid_msg_z.p_term = [p_z]
             pid_msg_z.i_term = [i_z]
             pid_msg_z.d_term = [d_z]
@@ -114,13 +115,14 @@ class ImageBaseApproach():
         self.pre_error_yi = error_yi
 
     # ROSトピック送信（速度制御モード）
-    def publish(self, nav_y, nav_z):
-        pub_msg = FlightNav()
-        pub_msg.pos_xy_nav_mode = FlightNav.VEL_MODE
-        pub_msg.pos_z_nav_mode = FlightNav.VEL_MODE
-        pub_msg.target_vel_y = nav_y
-        pub_msg.target_vel_z = nav_z
-        rospy.loginfo("publish message to uav/nav: %s, %s", nav_y, nav_z)
+    def publish(self, v_y, v_z):
+        pub_msg = SimpleFlightNav()
+        pub_msg.x_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.z_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.vel_y = v_y
+        pub_msg.vel_z = v_z
+        rospy.loginfo("publish message to uav/nav: %s, %s", v_y, v_z)
         self.pub_nav.publish(pub_msg)
     
     # 重心位置姿勢取得

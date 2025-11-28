@@ -1,6 +1,7 @@
 // -*- mode: c++ -*-
 
 #include <gimbalrotor/gimbalrotor_navigation.h>
+#include <aerial_robot_msgs/SimpleFlightNav.h>
 
 using namespace aerial_robot_model;
 using namespace aerial_robot_navigation;
@@ -72,6 +73,52 @@ void GimbalrotorNavigator::naviCallback(const aerial_robot_msgs::FlightNavConstP
     setTargetRoll(msg->target_roll);
   if (msg->pitch_nav_mode == 2)
     setTargetPitch(msg->target_pitch);
+}
+
+void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFlightNavConstPtr& msg)
+{
+  if(getNaviState() != HOVER_STATE) return;
+  /* z */
+  if(msg->z_control_mode == aerial_robot_msgs::SimpleFlightNav::VEL_MODE)
+    {
+      setTargetVelZ(msg->vel_z);
+      teleop_reset_time_ = teleop_reset_duration_ + ros::Time::now().toSec();
+    }
+  else if(msg->z_control_mode == aerial_robot_msgs::SimpleFlightNav::POS_MODE)
+    {
+      setTargetPosZ(msg->pos_z);
+      setTargetVelZ(0);
+    }
+  /* x */
+  switch(msg->x_control_mode)
+    {
+    case aerial_robot_msgs::SimpleFlightNav::POS_MODE:
+      {
+	x_control_mode_ = POS_CONTROL_MODE;
+	setTargetPosX(msg->pos_x);
+	setTargetVelX(0);
+      }
+    case aerial_robot_msgs::SimpleFlightNav::VEL_MODE:
+      {
+	x_control_mode_ = VEL_CONTROL_MODE;
+	setTargetVelX(msg->vel_x);
+      }
+    }
+  /* y */
+  switch(msg->y_control_mode)
+    {
+    case aerial_robot_msgs::SimpleFlightNav::POS_MODE:
+      {
+	y_control_mode_ = POS_CONTROL_MODE;
+	setTargetPosY(msg->pos_y);
+	setTargetVelY(0);
+      }
+    case aerial_robot_msgs::SimpleFlightNav::VEL_MODE:
+      {
+	y_control_mode_ = VEL_CONTROL_MODE;
+	setTargetVelY(msg->vel_y);
+      }
+    }  
 }
 
 void GimbalrotorNavigator::baselinkRotationProcess()
