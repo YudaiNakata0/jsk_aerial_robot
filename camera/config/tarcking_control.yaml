@@ -1,0 +1,10 @@
+generate_mask_node:
+
+navigation_node:
+  kp: 1e-04
+  ki: 1e-07
+  kd: 1e-04
+  limit_sum: 4.0
+  limit_p: 12.0
+  limit_i: 5e-02
+  limit_d: 12.0
