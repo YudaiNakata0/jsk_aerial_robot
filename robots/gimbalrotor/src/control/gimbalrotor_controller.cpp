@@ -486,8 +486,10 @@ void GimbalrotorController::ExtWrenchControl(){
   {
     // target_pitch_ += target_acc[0];
     // target_roll_ += target_acc[1];
-    navigator_->setXyControlMode(1);
+    navigator_->setXControlMode(1);
+    navigator_->setYControlMode(1);
     navigator_->setTargetAccX(target_acc[0]);
+    navigator_->setTargetAccY(target_acc[0]);
     // navigator_->setTargetAccY(feedforward_acc[1]);
     // navigator_->setTargetAngAccZ(feedforward_ang_acc[2]);
     // target_wrench_acc_cog[0] += feedforward_acc[0];
@@ -508,7 +510,6 @@ void GimbalrotorController::ExtWrenchControl(){
   }
 
   if(xyz_wrench_control_flag_){
-    navigator_->setXyControlMode(1);
     navigator_->setTargetAccX(target_acc[0]);
     navigator_->setTargetAccY(target_acc[1]);
     navigator_->setTargetAccZ(target_acc[2]);
@@ -591,6 +592,8 @@ void GimbalrotorController::SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg
 void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
 {
   xyz_wrench_control_flag_ = msg.data;
+  navigator_->setXControlMode(1);
+  navigator_->setYControlMode(1);
 }
 
 }  // namespace aerial_robot_control
