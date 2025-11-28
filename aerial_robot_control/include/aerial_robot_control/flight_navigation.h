@@ -66,7 +66,9 @@ namespace aerial_robot_navigation
 
     inline uint8_t getXyControlMode(){  return (uint8_t)xy_control_mode_;}
     inline void setXyControlMode(uint8_t mode){  xy_control_mode_ = mode;}
-
+    inline uint8_t getZControlMode(){  return (uint8_t)z_control_mode_;}
+    inline void setZControlMode(uint8_t mode){  z_control_mode_ = mode;}
+    
     inline uint8_t getControlframe(){  return (uint8_t)control_frame_;}
     inline void setControlframe(uint8_t frame_type){  control_frame_ = frame_type;}
 
@@ -240,6 +242,7 @@ namespace aerial_robot_navigation
     ros::Publisher  path_pub_;
     ros::Publisher  waypoint_pub_;
     ros::Publisher  xy_control_mode_pub_;
+    ros::Publisher  z_control_mode_pub_;    
     ros::Subscriber navi_sub_;
     ros::Subscriber single_goal_sub_;
     ros::Subscriber simple_move_base_goal_sub_;
@@ -252,6 +255,7 @@ namespace aerial_robot_navigation
     ros::Subscriber halt_sub_;
     ros::Subscriber force_landing_sub_;
     ros::Subscriber ctrl_mode_sub_;
+    ros::Subscriber z_ctrl_mode_sub_;    
     ros::Subscriber joy_stick_sub_;
     ros::Subscriber flight_nav_sub_;
     ros::Subscriber stop_teleop_sub_;
@@ -266,6 +270,7 @@ namespace aerial_robot_navigation
     int  xy_control_mode_;
     int  prev_xy_control_mode_;
     bool xy_vel_mode_pos_ctrl_takeoff_;
+    int  z_control_mode_;
 
     double loop_du_;
     int  control_frame_;
@@ -541,6 +546,33 @@ namespace aerial_robot_navigation
         }
     }
 
+    void zControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    {
+      if(getNaviState() > START_STATE)
+        {
+          if(msg->data == 0)
+            {
+              setTargetZFromCurrentState();
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              z_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("z position control mode");
+            }
+          if(msg->data == 1)
+            {
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              z_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("z velocity control mode");
+            }
+          if(msg->data == 2)
+            {
+              z_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("z acceleration control mode");
+            }
+        }
+    }    
+    
     void stopTeleopCallback(const std_msgs::UInt8ConstPtr & stop_msg)
     {
       if(stop_msg->data == 1)

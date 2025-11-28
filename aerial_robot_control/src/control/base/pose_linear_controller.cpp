@@ -273,7 +273,15 @@ namespace aerial_robot_control
         target_acc_.setZ(0);
       }
 
-    pid_controllers_.at(Z).update(err_z, du_z, err_v_z, target_acc_.z());
+    switch(navigator_->getZControlMode())
+      {
+      case aerial_robot_navigation::POS_CONTROL_MODE:
+	pid_controllers_.at(Z).update(err_z, du_z, err_v_z, target_acc_.z());
+	break;
+      case aerial_robot_navigation::VEL_CONTROL_MODE:
+	pid_controllers_.at(Z).update(0, du_z, err_v_z, target_acc_.z());
+	break;
+      }
 
     if(pid_controllers_.at(Z).getErrI() < 0) pid_controllers_.at(Z).setErrI(0);
 

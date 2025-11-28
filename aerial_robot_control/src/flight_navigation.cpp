@@ -61,6 +61,7 @@ void BaseNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   land_sub_ = teleop_nh.subscribe("land", 1, &BaseNavigator::landCallback, this);
   start_sub_ = teleop_nh.subscribe("start", 1,&BaseNavigator::startCallback, this);
   ctrl_mode_sub_ = teleop_nh.subscribe("ctrl_mode", 1, &BaseNavigator::xyControlModeCallback, this);
+  z_ctrl_mode_sub_ = teleop_nh.subscribe("z_ctrl_mode", 1, &BaseNavigator::zControlModeCallback, this);
 
   ros::TransportHints joy_transport_hints;
 #ifdef ARM_MELODIC // https://github.com/ros/ros_comm/issues/1404
@@ -77,6 +78,7 @@ void BaseNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   path_pub_ = nh_.advertise<nav_msgs::Path>("trajectory", 1);
   waypoint_pub_ = nh_.advertise<visualization_msgs::MarkerArray>("waypoints", 1);
   xy_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("xy_control_mode", 1);
+  z_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("z_control_mode", 1);
 
   estimate_mode_ = estimator_->getEstimateMode();
   force_landing_start_time_ = ros::Time::now();
@@ -866,6 +868,9 @@ void BaseNavigator::update()
   std_msgs::UInt8 xy_control_mode_msg;
   xy_control_mode_msg.data = xy_control_mode_;
   xy_control_mode_pub_.publish(xy_control_mode_msg);
+  std_msgs::UInt8 z_control_mode_msg;
+  z_control_mode_msg.data = z_control_mode_;
+  z_control_mode_pub_.publish(z_control_mode_msg);
 }
 
 void BaseNavigator::updateLandCommand()
@@ -1095,6 +1100,7 @@ void BaseNavigator::rosParamInit()
 
   ros::NodeHandle nh(nh_, "navigation");
   getParam<int>(nh, "xy_control_mode", xy_control_mode_, 0);
+  getParam<int>(nh, "z_control_mode", z_control_mode_, 0);
   getParam<double>(nh, "takeoff_height", takeoff_height_, 0.0);
 
   getParam<double>(nh, "land_descend_vel",land_descend_vel_, -0.3);
