@@ -25,6 +25,7 @@ void GimbalrotorNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
       nh_.subscribe("final_target_baselink_rot", 1, &GimbalrotorNavigator::targetBaselinkRotCallback, this);
   final_target_baselink_rpy_sub_ =
       nh_.subscribe("final_target_baselink_rpy", 1, &GimbalrotorNavigator::targetBaselinkRPYCallback, this);
+  simple_navi_sub_ = nh_.subscribe("simple_nav", 1, &GimbalrotorNavigator::simpleNaviCallback, this);
   prev_rotation_stamp_ = ros::Time::now().toSec();
 }
 

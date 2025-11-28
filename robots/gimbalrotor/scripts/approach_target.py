@@ -123,7 +123,7 @@ class ImageBaseApproach():
         pub_msg.vel_y = v_y
         pub_msg.vel_z = v_z
         rospy.loginfo("publish message to uav/nav: %s, %s", v_y, v_z)
-        self.pub_nav.publish(pub_msg)
+        self.pub_simple_nav.publish(pub_msg)
     
     # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
