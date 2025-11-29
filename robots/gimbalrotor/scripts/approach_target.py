@@ -56,9 +56,9 @@ class ImageBaseApproach():
             y_control_mode_msg = Int8()
             y_control_mode_msg.data = 0
             self.pub_y_control_mode.publish(y_control_mode_msg)
-            # if self.is_cog_goal_record:
-            #     print("cannot catch target; move to recorded goal pose")
-            #     self.publish_cog_target()
+            if self.is_cog_goal_record:
+                print("cannot catch target; move to recorded goal pose")
+                self.publish_cog_target()
             return
         
         self.target_xi = msg.x
