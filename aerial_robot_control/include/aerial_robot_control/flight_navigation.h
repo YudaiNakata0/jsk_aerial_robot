@@ -377,7 +377,8 @@ namespace aerial_robot_navigation
 
     void startTakeoff()
     {
-      if(getNaviState() == TAKEOFF_STATE) return;
+      /* ignore during flight */
+      if(getNaviState() == TAKEOFF_STATE || getNaviState() == HOVER_STATE || getNaviState() == LAND_STATE) return;
 
       /* check xy position error in initial state */
       double pos_x_error = getTargetPos().x() - estimator_->getPos(Frame::COG, estimate_mode_).x();
@@ -405,6 +406,9 @@ namespace aerial_robot_navigation
 
     void motorArming()
     {
+      /* ignore during flight */
+      if(getNaviState() == TAKEOFF_STATE || getNaviState() == HOVER_STATE || getNaviState() == LAND_STATE) return;
+      
       /* z(altitude) */
       /* check whether there is the fusion for the altitude */
       if(!estimator_->getStateStatus(State::Z_BASE, estimate_mode_))
