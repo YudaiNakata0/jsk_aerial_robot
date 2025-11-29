@@ -133,9 +133,9 @@ class ImageBaseApproach():
     # ROSトピック送信（速度制御モード）
     def publish(self, v_y, v_z):
         pub_msg = SimpleFlightNav()
-        pub_msg.x_control_mode = 1
-        pub_msg.y_control_mode = 1
-        pub_msg.z_control_mode = 1
+        pub_msg.x_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.z_control_mode = SimpleFlightNav.VEL_MODE
         pub_msg.vel_y = v_y
         pub_msg.vel_z = v_z
         rospy.loginfo("publish message to uav/nav: %s, %s", v_y, v_z)
