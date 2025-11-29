@@ -512,7 +512,7 @@ void GimbalrotorController::ExtWrenchControl(){
   if(xyz_wrench_control_flag_){
     navigator_->setTargetAccX(target_acc[0]);
     navigator_->setTargetAccY(target_acc[1]);
-    navigator_->setTargetAccZ(target_acc[2]);
+    // navigator_->setTargetAccZ(target_acc[2]);
   }
   
   if(pid_controllers_.at(X).result()<0.0)
