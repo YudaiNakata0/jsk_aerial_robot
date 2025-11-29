@@ -39,7 +39,6 @@ class GetTarget():
         if self.number_of_points < 1000:
             print("No sufficient points.")
             pub_coords_msg.z = 1
-            return
         else:
             center = np.mean(self.points, axis=0)
             print(center)
