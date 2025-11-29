@@ -234,20 +234,17 @@ namespace aerial_robot_control
     // time diff
     double du = ros::Time::now().toSec() - control_timestamp_;
 
-    // x & y
-    switch(navigator_->getXyControlMode())
+    // x
+    switch(navigator_->getXControlMode())
       {
       case aerial_robot_navigation::POS_CONTROL_MODE:
         pid_controllers_.at(X).update(target_pos_.x() - pos_.x(), du, target_vel_.x() - vel_.x(), target_acc_.x());
-        pid_controllers_.at(Y).update(target_pos_.y() - pos_.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
         break;
       case aerial_robot_navigation::VEL_CONTROL_MODE:
         pid_controllers_.at(X).update(0, du, target_vel_.x() - vel_.x(), target_acc_.x());
-        pid_controllers_.at(Y).update(0, du, target_vel_.y() - vel_.y(), target_acc_.y());
         break;
       case aerial_robot_navigation::ACC_CONTROL_MODE:
         pid_controllers_.at(X).update(0, du, 0, target_acc_.x());
-        pid_controllers_.at(Y).update(0, du, 0, target_acc_.y());
         break;
       default:
         break;
@@ -256,9 +253,29 @@ namespace aerial_robot_control
     if(navigator_->getForceLandingFlag())
       {
         pid_controllers_.at(X).reset();
-        pid_controllers_.at(Y).reset();
       }
 
+    // y
+    switch(navigator_->getYControlMode())
+      {
+      case aerial_robot_navigation::POS_CONTROL_MODE:
+        pid_controllers_.at(Y).update(target_pos_.y() - pos_.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
+        break;
+      case aerial_robot_navigation::VEL_CONTROL_MODE:
+        pid_controllers_.at(Y).update(0, du, target_vel_.y() - vel_.y(), target_acc_.y());
+        break;
+      case aerial_robot_navigation::ACC_CONTROL_MODE:
+        pid_controllers_.at(Y).update(0, du, 0, target_acc_.y());
+        break;
+      default:
+        break;
+      }
+
+    if(navigator_->getForceLandingFlag())
+      {
+        pid_controllers_.at(Y).reset();
+      }
+    
     // z
     double err_z = target_pos_.z() - pos_.z();
     double err_v_z = target_vel_.z() - vel_.z();

@@ -64,11 +64,13 @@ namespace aerial_robot_navigation
     inline uint8_t getNaviState(){  return navi_state_;}
     inline void setNaviState(const uint8_t  state){ navi_state_ = state;}
 
-    inline uint8_t getXyControlMode(){  return (uint8_t)xy_control_mode_;}
-    inline void setXyControlMode(uint8_t mode){  xy_control_mode_ = mode;}
+    inline uint8_t getXControlMode(){  return (uint8_t)x_control_mode_;}
+    inline void setXControlMode(uint8_t mode){  x_control_mode_ = mode;}
+    inline uint8_t getYControlMode(){  return (uint8_t)y_control_mode_;}
+    inline void setYControlMode(uint8_t mode){  y_control_mode_ = mode;}
     inline uint8_t getZControlMode(){  return (uint8_t)z_control_mode_;}
     inline void setZControlMode(uint8_t mode){  z_control_mode_ = mode;}
-    
+
     inline uint8_t getControlframe(){  return (uint8_t)control_frame_;}
     inline void setControlframe(uint8_t frame_type){  control_frame_ = frame_type;}
 
@@ -241,8 +243,9 @@ namespace aerial_robot_navigation
     ros::Publisher  flight_state_pub_;
     ros::Publisher  path_pub_;
     ros::Publisher  waypoint_pub_;
-    ros::Publisher  xy_control_mode_pub_;
-    ros::Publisher  z_control_mode_pub_;    
+    ros::Publisher  x_control_mode_pub_;
+    ros::Publisher  y_control_mode_pub_;
+    ros::Publisher  z_control_mode_pub_;
     ros::Subscriber navi_sub_;
     ros::Subscriber single_goal_sub_;
     ros::Subscriber simple_move_base_goal_sub_;
@@ -254,8 +257,9 @@ namespace aerial_robot_navigation
     ros::Subscriber start_sub_;
     ros::Subscriber halt_sub_;
     ros::Subscriber force_landing_sub_;
-    ros::Subscriber ctrl_mode_sub_;
-    ros::Subscriber z_ctrl_mode_sub_;    
+    ros::Subscriber x_ctrl_mode_sub_;
+    ros::Subscriber y_ctrl_mode_sub_;
+    ros::Subscriber z_ctrl_mode_sub_;
     ros::Subscriber joy_stick_sub_;
     ros::Subscriber flight_nav_sub_;
     ros::Subscriber stop_teleop_sub_;
@@ -267,8 +271,10 @@ namespace aerial_robot_navigation
 
     uint8_t navi_state_;
 
-    int  xy_control_mode_;
-    int  prev_xy_control_mode_;
+    int  x_control_mode_;
+    int  prev_x_control_mode_;
+    int  y_control_mode_;
+    int  prev_y_control_mode_;    
     bool xy_vel_mode_pos_ctrl_takeoff_;
     int  z_control_mode_;
 
@@ -376,7 +382,8 @@ namespace aerial_robot_navigation
 
     void startTakeoff()
     {
-      if(getNaviState() == TAKEOFF_STATE) return;
+      /* ignore during flight */
+      if(getNaviState() == TAKEOFF_STATE || getNaviState() == HOVER_STATE || getNaviState() == LAND_STATE) return;
 
       /* check xy position error in initial state */
       double pos_x_error = getTargetPos().x() - estimator_->getPos(Frame::COG, estimate_mode_).x();
@@ -404,6 +411,9 @@ namespace aerial_robot_navigation
 
     void motorArming()
     {
+      /* ignore during flight */
+      if(getNaviState() == TAKEOFF_STATE || getNaviState() == HOVER_STATE || getNaviState() == LAND_STATE) return;
+      
       /* z(altitude) */
       /* check whether there is the fusion for the altitude */
       if(!estimator_->getStateStatus(State::Z_BASE, estimate_mode_))
@@ -430,7 +440,8 @@ namespace aerial_robot_navigation
 
       setNaviState(START_STATE);
       trajectory_mode_ = false;
-      setTargetXyFromCurrentState();
+      setTargetXFromCurrentState();
+      setTargetYFromCurrentState();
       setTargetPosZ(takeoff_height_);
       setTargetVelZ(0);
       setTargetAccZ(0);
@@ -519,32 +530,59 @@ namespace aerial_robot_navigation
       ROS_INFO("Force Landing state");
     }
 
-    void xyControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    void xControlModeCallback(const std_msgs::Int8ConstPtr & msg)
     {
       if(getNaviState() > START_STATE)
         {
           if(msg->data == 0)
             {
-              setTargetXyFromCurrentState();
+              setTargetXFromCurrentState();
               setTargetZeroVel();
               setTargetZeroAcc();
-              xy_control_mode_ = POS_CONTROL_MODE;
-              ROS_INFO("x/y position control mode");
+              x_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("x position control mode");
             }
           if(msg->data == 1)
             {
               setTargetZeroVel();
               setTargetZeroAcc();
-              xy_control_mode_ = VEL_CONTROL_MODE;
-              ROS_INFO("x/y velocity control mode");
+              x_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("x velocity control mode");
             }
           if(msg->data == 2)
             {
-              xy_control_mode_ = ACC_CONTROL_MODE;
-              ROS_INFO("x/y acceleration control mode");
+              x_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("x acceleration control mode");
             }
         }
     }
+
+    void yControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    {
+      if(getNaviState() > START_STATE)
+        {
+          if(msg->data == 0)
+            {
+              setTargetYFromCurrentState();
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              y_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("y position control mode");
+            }
+          if(msg->data == 1)
+            {
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              y_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("y velocity control mode");
+            }
+          if(msg->data == 2)
+            {
+              y_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("y acceleration control mode");
+            }
+        }
+    }    
 
     void zControlModeCallback(const std_msgs::Int8ConstPtr & msg)
     {
@@ -557,8 +595,8 @@ namespace aerial_robot_navigation
               setTargetZeroAcc();
               z_control_mode_ = POS_CONTROL_MODE;
               ROS_INFO("z position control mode");
-            }
-          if(msg->data == 1)
+	    }
+	  if(msg->data == 1)
             {
               setTargetZeroVel();
               setTargetZeroAcc();
@@ -569,9 +607,9 @@ namespace aerial_robot_navigation
             {
               z_control_mode_ = ACC_CONTROL_MODE;
               ROS_INFO("z acceleration control mode");
-            }
-        }
-    }    
+	    }
+	}
+    }
     
     void stopTeleopCallback(const std_msgs::UInt8ConstPtr & stop_msg)
     {
@@ -587,22 +625,32 @@ namespace aerial_robot_navigation
         }
     }
 
-    void setTargetXyFromCurrentState()
+    void setTargetXFromCurrentState()
     {
-      setXyControlMode(POS_CONTROL_MODE);
+      setXControlMode(POS_CONTROL_MODE);
       tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);
       setTargetPosX(pos_cog.x());
-      setTargetPosY(pos_cog.y());
 
       // set the velocty to zero
       setTargetVelX(0);
-      setTargetVelY(0);
 
       // set the acceleration to zero
       setTargetAccX(0);
-      setTargetAccY(0);
     }
 
+    void setTargetYFromCurrentState()
+    {
+      setYControlMode(POS_CONTROL_MODE);
+      tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);
+      setTargetPosY(pos_cog.y());
+
+      // set the velocty to zero
+      setTargetVelY(0);
+
+      // set the acceleration to zero
+      setTargetAccY(0);
+    }    
+    
     void setTargetZFromCurrentState()
     {
       tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);

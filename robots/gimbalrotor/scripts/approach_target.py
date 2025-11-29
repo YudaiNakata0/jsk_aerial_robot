@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import rospy
-from aerial_robot_msgs.msg import FlightNav, Pid
+from aerial_robot_msgs.msg import FlightNav, Pid, SimpleFlightNav
 from geometry_msgs.msg import Vector3, Pose, PoseStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, Int8
 
 class ImageBaseApproach():
     def __init__(self, x, y, kp=1e-04, ki=1e-07, kd=1e-04):
@@ -41,17 +41,25 @@ class ImageBaseApproach():
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/uav/cog/odom", Odometry, self.cb_record_cog_pose)
         self.sub_endeffector = rospy.Subscriber("/gimbalrotor/endeffector_pose", Pose, self.cb_record_endeffector_pose)
         self.pub_nav = rospy.Publisher("/gimbalrotor/uav/nav", FlightNav, queue_size=1)
+        self.pub_simple_nav = rospy.Publisher("/gimbalrotor/simple_nav", SimpleFlightNav, queue_size=1)
         self.pub_cog = rospy.Publisher("/gimbalrotor/target_pose", PoseStamped, queue_size=1)
         self.pub_extrusion = rospy.Publisher("/set_gpio", Empty, queue_size=1)
         self.pub_y_pid = rospy.Publisher("/y_pid_term", Pid, queue_size=1)
         self.pub_z_pid = rospy.Publisher("/z_pid_term", Pid, queue_size=1)
+        self.pub_y_control_mode = rospy.Publisher("/gimbalrotor/teleop_command/y_ctrl_mode", Int8, queue_size=1)
 
     # カメラ画像を受け取ったとき
     def callback(self, msg):
+        # 目標が検出されないとき
         if msg.z == 1:
+            # yを位置制御モードに
+            y_control_mode_msg = Int8()
+            y_control_mode_msg.data = 0
+            self.pub_y_control_mode.publish(y_control_mode_msg)
             if self.is_cog_goal_record:
                 print("cannot catch target; move to recorded goal pose")
                 self.publish_cog_target()
+            return
         
         self.target_xi = msg.x
         self.target_yi = msg.y
@@ -75,6 +83,10 @@ class ImageBaseApproach():
             self.endeffector_goal_pose = self.endeffector_pose
             self.cog_target_msg.pose = self.cog_goal_pose
             self.is_cog_goal_record = True
+            # yを位置制御モードに
+            y_control_mode_msg = Int8()
+            y_control_mode_msg.data = 0
+            self.pub_y_control_mode.publish(y_control_mode_msg)
             # 射出トリガを送信
             if not self.is_extruding:
                 msg = Empty()
@@ -83,6 +95,11 @@ class ImageBaseApproach():
 
         # 目標速度を計算　*カメラ画像内の軸と実際の軸は逆
         else:
+            # yを速度制御モードに
+            y_control_mode_msg = Int8()
+            y_control_mode_msg.data = 1
+            self.pub_y_control_mode.publish(y_control_mode_msg)    
+
             p_y = -self.kp * error_xi
             p_z = -self.kp * error_yi
             i_y = -self.ki * self.integral_error_xi
@@ -92,18 +109,19 @@ class ImageBaseApproach():
             i_z = max(min(i_z, self.limit_i), -self.limit_i)
             d_y = -self.kd * (error_xi - self.pre_error_xi) / du
             d_z = -self.kd * (error_yi - self.pre_error_yi) / du
-            nav_y = p_y + i_y + d_y
-            nav_z = p_z + i_z + d_z
-            self.publish(nav_y, nav_z)
+            v_y = p_y + i_y + d_y
+            v_z = p_z + i_z + d_z
+            self.publish(v_y, v_z)
+            # self.publish_acc(v_y, v_z)
             # pid各項の値を記録
             pid_msg_y = Pid()
-            pid_msg_y.total = [nav_y]
+            pid_msg_y.total = [v_y]
             pid_msg_y.p_term = [p_y]
             pid_msg_y.i_term = [i_y]
             pid_msg_y.d_term = [d_y]
             self.pub_y_pid.publish(pid_msg_y)
             pid_msg_z = Pid()
-            pid_msg_z.total = [nav_z]
+            pid_msg_z.total = [v_z]
             pid_msg_z.p_term = [p_z]
             pid_msg_z.i_term = [i_z]
             pid_msg_z.d_term = [d_z]
@@ -114,15 +132,27 @@ class ImageBaseApproach():
         self.pre_error_yi = error_yi
 
     # ROSトピック送信（速度制御モード）
-    def publish(self, nav_y, nav_z):
-        pub_msg = FlightNav()
-        pub_msg.pos_xy_nav_mode = FlightNav.VEL_MODE
-        pub_msg.pos_z_nav_mode = FlightNav.VEL_MODE
-        pub_msg.target_vel_y = nav_y
-        pub_msg.target_vel_z = nav_z
-        rospy.loginfo("publish message to uav/nav: %s, %s", nav_y, nav_z)
-        self.pub_nav.publish(pub_msg)
-    
+    def publish(self, v_y, v_z):
+        pub_msg = SimpleFlightNav()
+        pub_msg.x_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.z_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.vel_y = v_y
+        pub_msg.vel_z = v_z
+        rospy.loginfo("publish message to uav/nav: %s, %s", v_y, v_z)
+        self.pub_simple_nav.publish(pub_msg)
+
+    # ROSトピック送信（加速度制御モード）
+    def publish_acc(self, a_y, a_z):
+        pub_msg = SimpleFlightNav()
+        pub_msg.x_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.z_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.acc_y = a_y
+        pub_msg.acc_z = a_z
+        rospy.loginfo("publish message to uav/nav: %s, %s", a_y, a_z)
+        self.pub_simple_nav.publish(pub_msg)
+        
     # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
         self.cog_pose = msg.pose.pose
