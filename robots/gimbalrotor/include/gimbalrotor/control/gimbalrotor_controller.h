@@ -62,6 +62,7 @@ private:
   Eigen::VectorXd desire_pos_;
   Eigen::VectorXd filtered_ftsensor_wrench_;
   Eigen::VectorXd offset_external_wrench_;
+  std::vector<Eigen::VectorXd> offset_sample_;
 
   double candidate_yaw_term_;
   int gimbal_dof_;
