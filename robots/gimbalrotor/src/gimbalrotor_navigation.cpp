@@ -99,19 +99,25 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
     {
     case aerial_robot_msgs::SimpleFlightNav::POS_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter x pos mode");
 	x_control_mode_ = POS_CONTROL_MODE;
 	setTargetPosX(msg->pos_x);
 	setTargetVelX(0);
+	break;
       }
     case aerial_robot_msgs::SimpleFlightNav::VEL_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter x vel mode");
 	x_control_mode_ = VEL_CONTROL_MODE;
 	setTargetVelX(msg->vel_x);
+	break;
       }
     case aerial_robot_msgs::SimpleFlightNav::ACC_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter x acc mode");
 	x_control_mode_ = ACC_CONTROL_MODE;
 	setTargetAccX(msg->acc_x);
+	break;
       }
     }
   /* y */
@@ -119,19 +125,25 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
     {
     case aerial_robot_msgs::SimpleFlightNav::POS_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter y pos mode");
 	y_control_mode_ = POS_CONTROL_MODE;
 	setTargetPosY(msg->pos_y);
 	setTargetVelY(0);
+	break;
       }
     case aerial_robot_msgs::SimpleFlightNav::VEL_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter y vel mode");
 	y_control_mode_ = VEL_CONTROL_MODE;
 	setTargetVelY(msg->vel_y);
+	break;
       }
     case aerial_robot_msgs::SimpleFlightNav::ACC_MODE:
       {
+	ROS_INFO("[simpleNaviCallback]enter y acc mode");
 	y_control_mode_ = ACC_CONTROL_MODE;
 	setTargetAccY(msg->acc_y);
+	break;
       }
     }
 }
