@@ -90,6 +90,10 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
       setTargetPosZ(msg->pos_z);
       setTargetVelZ(0);
     }
+  else if(msg->z_control_mode == aerial_robot_msgs::SimpleFlightNav::ACC_MODE)
+    {
+      setTargetAccZ(msg->acc_z);
+    }
   /* x */
   switch(msg->x_control_mode)
     {
@@ -103,6 +107,11 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
       {
 	x_control_mode_ = VEL_CONTROL_MODE;
 	setTargetVelX(msg->vel_x);
+      }
+    case aerial_robot_msgs::SimpleFlightNav::ACC_MODE:
+      {
+	x_control_mode_ = ACC_CONTROL_MODE;
+	setTargetAccX(msg->acc_x);
       }
     }
   /* y */
@@ -119,7 +128,12 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
 	y_control_mode_ = VEL_CONTROL_MODE;
 	setTargetVelY(msg->vel_y);
       }
-    }  
+    case aerial_robot_msgs::SimpleFlightNav::ACC_MODE:
+      {
+	y_control_mode_ = ACC_CONTROL_MODE;
+	setTargetAccY(msg->acc_y);
+      }
+    }
 }
 
 void GimbalrotorNavigator::baselinkRotationProcess()
