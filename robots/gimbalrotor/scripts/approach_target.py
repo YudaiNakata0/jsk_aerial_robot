@@ -112,6 +112,7 @@ class ImageBaseApproach():
             v_y = p_y + i_y + d_y
             v_z = p_z + i_z + d_z
             self.publish(v_y, v_z)
+            # self.publish_acc(v_y, v_z)
             # pid各項の値を記録
             pid_msg_y = Pid()
             pid_msg_y.total = [v_y]
@@ -140,7 +141,18 @@ class ImageBaseApproach():
         pub_msg.vel_z = v_z
         rospy.loginfo("publish message to uav/nav: %s, %s", v_y, v_z)
         self.pub_simple_nav.publish(pub_msg)
-    
+
+    # ROSトピック送信（加速度制御モード）
+    def publish_acc(self, a_y, a_z):
+        pub_msg = SimpleFlightNav()
+        pub_msg.x_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.z_control_mode = SimpleFlightNav.ACC_MODE
+        pub_msg.acc_y = a_y
+        pub_msg.acc_z = a_z
+        rospy.loginfo("publish message to uav/nav: %s, %s", a_y, a_z)
+        self.pub_simple_nav.publish(pub_msg)
+        
     # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
         self.cog_pose = msg.pose.pose
