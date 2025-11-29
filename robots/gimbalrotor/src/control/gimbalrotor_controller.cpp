@@ -436,7 +436,7 @@ void GimbalrotorController::ExtWrenchControl(){
       {
 	time_hover_ = ros::Time::now();
 	offset_sample_.clear();
-	ROS_INFO("[gimbalrotor_controller]start offset recording...");
+	ROS_INFO("[gimbalrotor_controller]Start offset recording...");
       }
     ros::Duration duration = ros::Time::now() - time_hover_;
     if(duration.toSec() > 1.0 && duration.toSec() <= 2.0)
@@ -449,7 +449,7 @@ void GimbalrotorController::ExtWrenchControl(){
 	for(const auto& w : offset_sample_){avg += w;}
 	avg /= (double) offset_sample_.size();
 	offset_external_wrench_ = avg;
-	ROS_INFO("(gimbalrotor_contorller)Recorded external wrench for offset: "
+	ROS_INFO("[gimbalrotor_contorller]Recorded external wrench for offset: "
 		 "Force: [%.6f, %.6f, %.6f], Torque: [%.6f, %.6f, %.6f]",
 		 offset_external_wrench_(0),
 		 offset_external_wrench_(1),
@@ -465,10 +465,14 @@ void GimbalrotorController::ExtWrenchControl(){
   if(navigator_->getNaviState() == aerial_robot_navigation::LAND_STATE ||
      navigator_->getNaviState() == aerial_robot_navigation::STOP_STATE)
     {
-      offset_sample_.clear();
-      offset_record_flag_ = false;
-      offset_external_wrench_ = Eigen::VectorXd::Zero(6);
-      time_hover_ = ros::Timer(0);
+      if(offset_record_flag_)
+	{
+	  ROS_INFO("[gimbalrotor_contorller]Reset offset wrench");
+	  offset_sample_.clear();
+	  offset_record_flag_ = false;
+	  offset_external_wrench_ = Eigen::VectorXd::Zero(6);
+	  time_hover_ = ros::Time(0);
+	}
     }
 
   //apply offset
