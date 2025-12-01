@@ -82,6 +82,11 @@ void GimbalrotorController::rosParamInit()
   getParam<double>(control_nh, "sample_freq", sample_freq, 100.0);
   lpf_est_external_wrench_ = IirFilter(sample_freq, cutoff_freq, 6);
 
+  double recording_time;
+  getParam<double>(control_nh, "wrench_record/start_time", recording_start_time_, 1.0);
+  getParam<double>(control_nh, "wrench_record/recording_time", recording_time, 1.0);
+  recording_end_time_ = recording_start_time_ + recording_time;
+
   x_p_gain_ = pid_controllers_.at(X).getPGain();
   y_p_gain_ = pid_controllers_.at(Y).getPGain();
 }
@@ -417,7 +422,10 @@ void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped ms
   desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
   desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
   // apply wrench offset
-  // desire_wrench_ -= offset_external_wrench_;
+  if(std::isfinite(offset_external_wrench_(2)))
+    {
+      desire_wrench_ -= offset_external_wrench_;
+    }
 }
 
 void GimbalrotorController::ExtWrenchControl(){
@@ -439,26 +447,30 @@ void GimbalrotorController::ExtWrenchControl(){
 	ROS_INFO("[gimbalrotor_controller]Start offset recording...");
       }
     ros::Duration duration = ros::Time::now() - time_hover_;
-    if(duration.toSec() > 1.0 && duration.toSec() <= 2.0)
+    if(duration.toSec() > recording_start_time_ && duration.toSec() <= recording_end_time_)
       {
 	offset_sample_.push_back(filtered_est_external_wrench);
       }
-    else if(duration.toSec() > 2.0)
+    else if(duration.toSec() > recording_end_time_)
       {
 	Eigen::VectorXd avg = Eigen::VectorXd::Zero(6);
 	for(const auto& w : offset_sample_){avg += w;}
 	avg /= (double) offset_sample_.size();
 	offset_external_wrench_ = avg;
-	ROS_INFO("[gimbalrotor_contorller]Recorded external wrench for offset: "
-		 "Force: [%.6f, %.6f, %.6f], Torque: [%.6f, %.6f, %.6f]",
-		 offset_external_wrench_(0),
-		 offset_external_wrench_(1),
-		 offset_external_wrench_(2),
-		 offset_external_wrench_(3),
-		 offset_external_wrench_(4),
-		 offset_external_wrench_(5));
-	offset_record_flag_ = true;
-	desire_wrench_ -= offset_external_wrench_;
+	if(std::isfinite(offset_external_wrench_(2)))
+	  {
+	    ROS_INFO("[gimbalrotor_contorller]Recorded external wrench for offset: "
+		     "Force: [%.6f, %.6f, %.6f], Torque: [%.6f, %.6f, %.6f]",
+		     offset_external_wrench_(0),
+		     offset_external_wrench_(1),
+		     offset_external_wrench_(2),
+		     offset_external_wrench_(3),
+		     offset_external_wrench_(4),
+		     offset_external_wrench_(5));
+	    offset_record_flag_ = true;
+	    desire_wrench_ -= offset_external_wrench_;
+	  }
+	else{ROS_INFO("[gimbalrotor_controller]Could not record external wrench for offset.");}
       }
   }
   // reset offset external wrench (when landed or stopped)
