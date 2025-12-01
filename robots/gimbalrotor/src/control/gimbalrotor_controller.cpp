@@ -439,11 +439,11 @@ void GimbalrotorController::ExtWrenchControl(){
 	ROS_INFO("[gimbalrotor_controller]Start offset recording...");
       }
     ros::Duration duration = ros::Time::now() - time_hover_;
-    if(duration.toSec() > 1.0 && duration.toSec() <= 2.0)
+    if(duration.toSec() > 2.0 && duration.toSec() <= 5.0)
       {
 	offset_sample_.push_back(filtered_est_external_wrench);
       }
-    else if(duration.toSec() > 2.0)
+    else if(duration.toSec() > 5.0)
       {
 	Eigen::VectorXd avg = Eigen::VectorXd::Zero(6);
 	for(const auto& w : offset_sample_){avg += w;}
