@@ -49,3 +49,7 @@ controller:
     limit_d: 20.0
 
     need_d_control: true
+
+  wrench_record:
+    start_time: 3.0
+    recording_time: 5.0

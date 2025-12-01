@@ -82,6 +82,8 @@ private:
   IirFilter lpf_est_external_wrench_;
   int flight_state_;
   double target_acc_gain_;
+  double recording_start_time_;
+  double recording_end_time_;
 
   void rosParamInit();
   bool update() override;
