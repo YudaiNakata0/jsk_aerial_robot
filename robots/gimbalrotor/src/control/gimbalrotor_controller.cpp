@@ -487,9 +487,6 @@ void GimbalrotorController::ExtWrenchControl(){
 	}
     }
 
-  //apply offset
-  // filtered_est_external_wrench -= offset_external_wrench_;
-
   Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
   tf::Matrix3x3 uav_rot = estimator_->getOrientation(Frame::COG, estimate_mode_);
   tf::Vector3 target_acc_w(pid_controllers_.at(X).result(),
@@ -537,15 +534,37 @@ void GimbalrotorController::ExtWrenchControl(){
 
     // std::cout << "send_feedforward" << std::endl;
   }
-  if(!attaching_flag_)
-    {
-    navigator_->setTargetAccX(0);
-    // navigator_->setTargetAccY(0);
-    // navigator_->setTargetAngAccZ(0);
-    feedforward_sum_ = Eigen::VectorXd::Zero(6);
-  }
+  // if(!attaching_flag_)
+  //   {
+  //   navigator_->setTargetAccX(0);
+  //   // navigator_->setTargetAccY(0);
+  //   // navigator_->setTargetAngAccZ(0);
+  //   feedforward_sum_ = Eigen::VectorXd::Zero(6);
+  // }
 
   if(xyz_wrench_control_flag_){
+    Eigen::VectorXd external_acc =  mass_inv * offset_external_wrench_;
+    external_acc[2] -= 9.80665;
+    double x_i_term = pid_controllers_.at(X).getITerm();
+    double y_i_term = pid_controllers_.at(Y).getITerm();
+    double z_i_term = pid_controllers_.at(Z).getITerm();
+    Eigen::Vector3d adjust_acc;
+    adjust_acc[0] = -external_acc[0] - x_i_term;
+    adjust_acc[1] = -external_acc[1] - y_i_term;
+    adjust_acc[2] = -external_acc[2] - z_i_term;
+    // ROS_INFO("[gimbalrotor_contorller]adjust acc: [%.6f, %.6f, %.6f]",
+    // 	     adjust_acc[0],
+    // 	     adjust_acc[1],
+    // 	     adjust_acc[2]);
+    // if(std::isfinite(adjust_acc[2]))
+    //   {
+    // 	target_acc[0] = target_acc[0] + adjust_acc[0];
+    // 	target_acc[1] = target_acc[1] + adjust_acc[1];
+    // 	target_acc[2] = target_acc[2] + adjust_acc[2];
+    //   }
+    target_acc[0] = target_acc[0] - x_i_term;
+    target_acc[1] = target_acc[1] - y_i_term;
+    target_acc[2] = target_acc[2] - z_i_term + 9.80665;
     navigator_->setTargetAccX(target_acc[0]);
     navigator_->setTargetAccY(target_acc[1]);
     navigator_->setTargetAccZ(target_acc[2]);
@@ -628,9 +647,18 @@ void GimbalrotorController::SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg
 void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
 {
   xyz_wrench_control_flag_ = msg.data;
-  navigator_->setXControlMode(1);
-  navigator_->setYControlMode(1);
-  navigator_->setZControlMode(1);
+  if(msg.data)
+    {
+      navigator_->setXControlMode(1);
+      navigator_->setYControlMode(1);
+      navigator_->setZControlMode(1);
+    }
+  else
+    {
+      navigator_->setXControlMode(0);
+      navigator_->setYControlMode(0);
+      navigator_->setZControlMode(0);
+    }
 }
 
 }  // namespace aerial_robot_control
