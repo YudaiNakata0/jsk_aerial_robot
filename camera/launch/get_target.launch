@@ -12,6 +12,7 @@
   <arg name="i_gain" default="0.0000001"/>
   <arg name="d_gain" default="0.0001"/>
   <arg name="sim" default="False"/>
+  <arg name="nav_mode" default="1"/>
 
   <!-- generate mask -->
   <node pkg="camera" type="mask.py" name="generate_mask_node">
@@ -31,12 +32,24 @@
   <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
 
   <!-- navigator -->
-  <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen">
-    <param name="ee_x" value="$(arg endeffector_x)"/>
-    <param name="ee_y" value="$(arg endeffector_y)"/>
-    <param name="kp" value="$(arg p_gain)"/>
-    <param name="ki" value="$(arg i_gain)"/>
-    <param name="kd" value="$(arg d_gain)"/>
-  </node>
+  <group if="$(eval nav_mode==1)">
+    <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen">
+      <param name="ee_x" value="$(arg endeffector_x)"/>
+      <param name="ee_y" value="$(arg endeffector_y)"/>
+      <param name="kp" value="$(arg p_gain)"/>
+      <param name="ki" value="$(arg i_gain)"/>
+      <param name="kd" value="$(arg d_gain)"/>
+    </node>
+  </group>
+
+  <group if="$(eval nav_mode==2)">
+    <node pkg="gimbalrotor" type="acc_approach_target.py" name="navigation_node" output="screen">
+      <param name="ee_x" value="$(arg endeffector_x)"/>
+      <param name="ee_y" value="$(arg endeffector_y)"/>
+      <param name="kp" value="$(arg p_gain)"/>
+      <param name="ki" value="$(arg i_gain)"/>
+      <param name="kd" value="$(arg d_gain)"/>
+    </node>
+  </group>
   
 </launch>
