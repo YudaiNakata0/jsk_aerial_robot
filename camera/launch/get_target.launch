@@ -9,6 +9,7 @@
   <arg name="endeffector_x" default="650"/>
   <arg name="endeffector_y" default="410"/>
   <arg name="p_gain" default="0.0001"/>
+  <arg name="i_gain" default="0.0000001"/>
   <arg name="d_gain" default="0.0001"/>
   <arg name="sim" default="False"/>
 
@@ -34,6 +35,7 @@
     <param name="ee_x" value="$(arg endeffector_x)"/>
     <param name="ee_y" value="$(arg endeffector_y)"/>
     <param name="kp" value="$(arg p_gain)"/>
+    <param name="ki" value="$(arg i_gain)"/>
     <param name="kd" value="$(arg d_gain)"/>
   </node>
   

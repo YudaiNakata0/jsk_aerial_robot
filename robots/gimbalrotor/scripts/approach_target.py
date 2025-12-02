@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
 import rospy
 from aerial_robot_msgs.msg import FlightNav, Pid, SimpleFlightNav
-from geometry_msgs.msg import Vector3, Pose, PoseStamped
+from geometry_msgs.msg import Vector3, Pose, PoseStamped, WrenchStamped
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Empty, Int8
 
 class ImageBaseApproach():
-    def __init__(self, x, y, kp=1e-04, ki=1e-07, kd=1e-04):
-        self.setup_parameters(x, y, kp, kd, ki)
+    def __init__(self):
+        self.setup_parameters()
         self.setup_ros()
 
-    def setup_parameters(self, x, y, kp, kd, ki):
-        self.endeffector_xi = x
-        self.endeffector_yi = y
+    def setup_parameters(self):
+        self.endeffector_xi = rospy.get_param("~ee_x", 650)
+        self.endeffector_yi = rospy.get_param("~ee_y", 410)
         self.target_xi = 0.0
         self.target_yi = 0.0
         
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
+        self.kp = rospy.get_param("~kp", 1e-04)
+        self.ki = rospy.get_param("~ki", 1e-07)
+        self.kd = rospy.get_param("~kd", 1e-04)
+        print(f"[ImageBaseApproach]endeffector coords [x:{self.endeffector_xi}, y:{self.endeffector_yi}], p gain:{self.kp}, i gain:{self.ki}, d gain:{self.kd}")
         self.integral_error_xi = 0.0
         self.integral_error_yi = 0.0
         self.limit_i = 5e-02
@@ -170,13 +171,7 @@ class ImageBaseApproach():
 
 if __name__ == "__main__":
     rospy.init_node("navigation_node")
-    x = rospy.get_param("~ee_x", 650)
-    y = rospy.get_param("~ee_y", 410)
-    kp = rospy.get_param("~kp", 1e-04)
-    ki = rospy.get_param("~ki", 1e-07)
-    kd = rospy.get_param("~kd", 1e-04)
-    print(f"[ImageBaseApproach]endeffector coords [x:{x}, y:{y}], p gain:{kp}, d gain:{kd}")
-    navigator = ImageBaseApproach(x=x, y=y, kp=kp, ki=ki, kd=kd)
+    navigator = ImageBaseApproach()
     r = rospy.Rate(0.5)
     # while not rospy.is_shutdown():
     #     navigator.publish_cog_target()
