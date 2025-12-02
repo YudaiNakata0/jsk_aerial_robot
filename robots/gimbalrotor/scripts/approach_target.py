@@ -48,6 +48,7 @@ class ImageBaseApproach():
         self.pub_y_pid = rospy.Publisher("/y_pid_term", Pid, queue_size=1)
         self.pub_z_pid = rospy.Publisher("/z_pid_term", Pid, queue_size=1)
         self.pub_y_control_mode = rospy.Publisher("/gimbalrotor/teleop_command/y_ctrl_mode", Int8, queue_size=1)
+        self.pub_wrench = rospy.Publisher("/gimbalrotor/desire_wrench", WrenchStamped, queue_size=1)
 
     # カメラ画像を受け取ったとき
     def callback(self, msg):
@@ -151,8 +152,18 @@ class ImageBaseApproach():
         pub_msg.z_control_mode = SimpleFlightNav.ACC_MODE
         pub_msg.acc_y = a_y
         pub_msg.acc_z = a_z
-        rospy.loginfo("publish message to uav/nav: %s, %s", a_y, a_z)
+        rospy.loginfo("publish message to simple_nav: %s, %s", a_y, a_z)
         self.pub_simple_nav.publish(pub_msg)
+
+    # ROSトピック送信（加速度、力次元）
+    def publish_acc_to_desire_wrench(self, w_y, w_z):
+        pub_msg = WrenchStamped()
+        pub_msg.wrench.force.x = 1.0
+        pub_msg.wrench.force.y = w_y
+        pub_msg.wrench.force.z = w_z
+        rospy.loginfo("publish message to desire_wrench: %s, %s", w_y, w_z)
+        self.pub_wrench.publish(pub_msg)
+
         
     # 重心位置姿勢取得
     def cb_record_cog_pose(self, msg):
