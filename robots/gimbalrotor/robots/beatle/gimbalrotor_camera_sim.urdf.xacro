@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot
     xmlns:xacro="http://www.ros.org/wiki/xacro" name="gimbalrotor" >
-
+  <xacro:arg name="enable_camera" default="false" />
   <xacro:include filename="$(find gimbalrotor)/urdf/beatle/gimbalrotor_camera_sim.urdf.xacro" />
   <!-- <xacro:include filename="$(find gimbalrotor)/urdf/beatle/gimbalrotor_attachment.urdf.xacro" /> -->
   

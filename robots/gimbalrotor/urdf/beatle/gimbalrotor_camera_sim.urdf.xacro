@@ -2,6 +2,7 @@
 <robot
     xmlns:xacro="http://www.ros.org/wiki/xacro" name="gimbalrotor_link" >
 
+  <xacro:property name="enable_camera" default="false" />
   <xacro:macro name="dummy_collision_link" params="name parent r o_xyz rpy j_xyz j_rpy">
     <link name="${name}">
       <inertial>

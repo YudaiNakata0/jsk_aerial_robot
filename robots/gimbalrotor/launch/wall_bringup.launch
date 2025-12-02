@@ -22,6 +22,7 @@
   <arg name="robot_id" default="" />
   <arg name="robot_ns" value="gimbalrotor$(arg robot_id)" />
   <arg name="airframe" default="quad" />
+  <arg name="enable_camera" default="false" />
 
   ###########  Parameters  ###########
   <group ns="$(arg robot_ns)">
@@ -76,6 +77,7 @@
     <arg name="rviz_config" value="$(arg config_dir)/rviz_config" />
     <arg name="rviz_init_pose" value="$(arg config_dir)/RvizInit.yaml" />
     <arg name="need_joint_state" value="false" if ="$(eval arg('simulation') or arg('real_machine'))"/>
+    <arg name="enable_camera" value="$(arg enable_camera)" />
   </include >
 
   ##########  Sensors  ##########
