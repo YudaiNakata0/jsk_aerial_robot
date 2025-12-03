@@ -31,7 +31,7 @@
   <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
 
   <!-- navigator -->
-  <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen">
+  <node pkg="gimbalrotor" type="pos_approach_target.py" name="navigation_node" output="screen">
     <param name="ee_x" value="$(arg endeffector_x)"/>
     <param name="ee_y" value="$(arg endeffector_y)"/>
     <param name="kp" value="$(arg p_gain)"/>
