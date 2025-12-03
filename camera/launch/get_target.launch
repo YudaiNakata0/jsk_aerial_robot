@@ -32,24 +32,12 @@
   <node pkg="rqt_image_view" type="rqt_image_view" name="image_viewer_node"/>
 
   <!-- navigator -->
-  <group if="$(eval nav_mode==1)">
-    <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen">
-      <param name="ee_x" value="$(arg endeffector_x)"/>
-      <param name="ee_y" value="$(arg endeffector_y)"/>
-      <param name="kp" value="$(arg p_gain)"/>
-      <param name="ki" value="$(arg i_gain)"/>
-      <param name="kd" value="$(arg d_gain)"/>
-    </node>
-  </group>
-
-  <group if="$(eval nav_mode==2)">
-    <node pkg="gimbalrotor" type="acc_approach_target.py" name="navigation_node" output="screen">
-      <param name="ee_x" value="$(arg endeffector_x)"/>
-      <param name="ee_y" value="$(arg endeffector_y)"/>
-      <param name="kp" value="$(arg p_gain)"/>
-      <param name="ki" value="$(arg i_gain)"/>
-      <param name="kd" value="$(arg d_gain)"/>
-    </node>
-  </group>
+  <node pkg="gimbalrotor" type="pos_approach_target.py" name="navigation_node" output="screen">
+    <param name="ee_x" value="$(arg endeffector_x)"/>
+    <param name="ee_y" value="$(arg endeffector_y)"/>
+    <param name="kp" value="$(arg p_gain)"/>
+    <param name="ki" value="$(arg i_gain)"/>
+    <param name="kd" value="$(arg d_gain)"/>
+  </node>
   
 </launch>
