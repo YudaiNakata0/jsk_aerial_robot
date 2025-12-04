@@ -655,6 +655,10 @@ void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
     }
   else
     {
+      tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);
+      navigator_->setTargetPosX(pos_cog.x());
+      navigator_->setTargetPosY(pos_cog.y());
+      navigator_->setTargetPosZ(pos_cog.z());
       navigator_->setXControlMode(0);
       navigator_->setYControlMode(0);
       navigator_->setZControlMode(0);
