@@ -143,7 +143,7 @@ class ImageBaseApproach():
     def publish(self, v_y, v_z):
         pub_msg = SimpleFlightNav()
         pub_msg.x_control_mode = SimpleFlightNav.VEL_MODE
-        pub_msg.y_control_mode = SimpleFlightNav.VEL_MODE
+        pub_msg.y_control_mode = SimpleFlightNav.POS_VEL_MODE
         pub_msg.z_control_mode = SimpleFlightNav.VEL_MODE
         pub_msg.vel_y = v_y
         pub_msg.vel_z = v_z

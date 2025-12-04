@@ -2,6 +2,7 @@ uint8 NO_NAVIGATION = 0
 uint8 VEL_MODE = 1
 uint8 POS_MODE = 2
 uint8 ACC_MODE = 3
+uint8 POS_VEL_MODE = 4
 
 uint8 x_control_mode
 uint8 y_control_mode

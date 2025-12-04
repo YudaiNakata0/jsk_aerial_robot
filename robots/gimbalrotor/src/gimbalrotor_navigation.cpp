@@ -119,6 +119,14 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
 	setTargetAccX(msg->acc_x);
 	break;
       }
+    case aerial_robot_msgs::SimpleFlightNav::POS_VEL_MODE:
+      {
+	ROS_INFO("[simpleNaviCallback]enter x pos-vel mode");
+	x_control_mode_ = POS_CONTROL_MODE;
+	setTargetVelX(msg->vel_x);
+	teleop_reset_time_ = teleop_reset_duration_ + ros::Time::now().toSec();
+	break;	
+      }
     }
   /* y */
   switch(msg->y_control_mode)
@@ -145,6 +153,14 @@ void GimbalrotorNavigator::simpleNaviCallback(const aerial_robot_msgs::SimpleFli
 	setTargetAccY(msg->acc_y);
 	break;
       }
+    case aerial_robot_msgs::SimpleFlightNav::POS_VEL_MODE:
+      {
+	ROS_INFO("[simpleNaviCallback]enter y pos-vel mode");
+	y_control_mode_ = POS_CONTROL_MODE;
+	setTargetVelY(msg->vel_y);
+	teleop_reset_time_ = teleop_reset_duration_ + ros::Time::now().toSec();
+	break;	
+      }      
     }
 }
 
