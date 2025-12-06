@@ -41,6 +41,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   xyz_wrench_control_flag_sub_ = nh_.subscribe("xyz_wrench_control_flag", 1, &GimbalrotorController::XYZWrenchControlFlagCallBack, this);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
+  cog_x_vel_mode_sub_ = nh_.subscribe("cog_x_vel_mode", 1, &GimbalrotorController::COGXVelModeCallBack, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
   desire_wrench_ = Eigen::VectorXd::Zero(6);
   filtered_ftsensor_wrench_ = Eigen::VectorXd::Zero(6);
@@ -50,6 +51,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   feedforward_sum_ = Eigen::VectorXd::Zero(6);
   attaching_flag_ = false;
   xyz_wrench_control_flag_ = false;
+  if_cog_x_vel_mode_ = false;
   const_err_i_flag_ = false;
   first_flag_ = true;
   offset_record_flag_ = false;
@@ -114,6 +116,18 @@ void GimbalrotorController::controlCore()
   tf::Vector3 target_acc_dash = (tf::Matrix3x3(tf::createQuaternionFromYaw(rpy_.z()))).inverse() * target_acc_w;
   tf::Vector3 target_acc_cog = uav_rot.inverse() * target_acc_w;
   Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
+
+  if(if_cog_x_vel_mode_)
+    {
+      // tf::Vector3 p_term_w(pid_controllers_.at(X).getPTerm(),
+      // 			   pid_controllers_.at(Y).getPTerm(),
+      // 			   pid_controllers_.at(Z).getPTerm());
+      // tf::Vector3 p_term_cog = uav_rot.inverse() * p_term_w;
+      // target_acc_cog[0] -= p_term_cog[0];
+      target_acc_cog[0] = pid_controllers_cog_.at(X).result();
+      target_acc_cog[1] = pid_controllers_cog_.at(Y).result();
+      target_acc_cog[2] = pid_controllers_cog_.at(Z).result();
+    }
 
   if (underactuate_)
     target_wrench_acc_cog.head(3) = Eigen::Vector3d(target_acc_dash.x(), target_acc_dash.y(), target_acc_dash.z());
@@ -421,11 +435,11 @@ void GimbalrotorController::DesireWrenchCallback(geometry_msgs::WrenchStamped ms
   KDL::Wrench w_cog = end_to_cog * w_end;
   desire_wrench_.head<3>() = aerial_robot_model::kdlToEigen(w_cog.force);
   desire_wrench_.tail<3>() = aerial_robot_model::kdlToEigen(w_cog.torque);
-  // apply wrench offset
-  if(std::isfinite(offset_external_wrench_(2)))
-    {
-      desire_wrench_ -= offset_external_wrench_;
-    }
+  // // apply wrench offset
+  // if(std::isfinite(offset_external_wrench_(2)))
+  //   {
+  //     desire_wrench_ -= offset_external_wrench_;
+  //   }
 }
 
 void GimbalrotorController::ExtWrenchControl(){
@@ -437,55 +451,55 @@ void GimbalrotorController::ExtWrenchControl(){
   Eigen::VectorXd filtered_est_external_wrench;
   filtered_est_external_wrench = lpf_est_external_wrench_.filterFunction(est_external_wrench_);
 
-  // record offset external wrench
-  if(!offset_record_flag_ && navigator_->getNaviState() == aerial_robot_navigation::HOVER_STATE)
-  {
-    if(time_hover_.isZero())
-      {
-	time_hover_ = ros::Time::now();
-	offset_sample_.clear();
-	ROS_INFO("[gimbalrotor_controller]Start offset recording...");
-      }
-    ros::Duration duration = ros::Time::now() - time_hover_;
-    if(duration.toSec() > recording_start_time_ && duration.toSec() <= recording_end_time_)
-      {
-	offset_sample_.push_back(filtered_est_external_wrench);
-      }
-    else if(duration.toSec() > recording_end_time_)
-      {
-	Eigen::VectorXd avg = Eigen::VectorXd::Zero(6);
-	for(const auto& w : offset_sample_){avg += w;}
-	avg /= (double) offset_sample_.size();
-	offset_external_wrench_ = avg;
-	if(std::isfinite(offset_external_wrench_(2)))
-	  {
-	    ROS_INFO("[gimbalrotor_contorller]Recorded external wrench for offset: "
-		     "Force: [%.6f, %.6f, %.6f], Torque: [%.6f, %.6f, %.6f]",
-		     offset_external_wrench_(0),
-		     offset_external_wrench_(1),
-		     offset_external_wrench_(2),
-		     offset_external_wrench_(3),
-		     offset_external_wrench_(4),
-		     offset_external_wrench_(5));
-	    offset_record_flag_ = true;
-	    desire_wrench_ -= offset_external_wrench_;
-	  }
-	else{ROS_INFO("[gimbalrotor_controller]Could not record external wrench for offset.");}
-      }
-  }
-  // reset offset external wrench (when landed or stopped)
-  if(navigator_->getNaviState() == aerial_robot_navigation::LAND_STATE ||
-     navigator_->getNaviState() == aerial_robot_navigation::STOP_STATE)
-    {
-      if(offset_record_flag_)
-	{
-	  ROS_INFO("[gimbalrotor_contorller]Reset offset wrench");
-	  offset_sample_.clear();
-	  offset_record_flag_ = false;
-	  offset_external_wrench_ = Eigen::VectorXd::Zero(6);
-	  time_hover_ = ros::Time(0);
-	}
-    }
+  // // record offset external wrench
+  // if(!offset_record_flag_ && navigator_->getNaviState() == aerial_robot_navigation::HOVER_STATE)
+  // {
+  //   if(time_hover_.isZero())
+  //     {
+  // 	time_hover_ = ros::Time::now();
+  // 	offset_sample_.clear();
+  // 	ROS_INFO("[gimbalrotor_controller]Start offset recording...");
+  //     }
+  //   ros::Duration duration = ros::Time::now() - time_hover_;
+  //   if(duration.toSec() > recording_start_time_ && duration.toSec() <= recording_end_time_)
+  //     {
+  // 	offset_sample_.push_back(filtered_est_external_wrench);
+  //     }
+  //   else if(duration.toSec() > recording_end_time_)
+  //     {
+  // 	Eigen::VectorXd avg = Eigen::VectorXd::Zero(6);
+  // 	for(const auto& w : offset_sample_){avg += w;}
+  // 	avg /= (double) offset_sample_.size();
+  // 	offset_external_wrench_ = avg;
+  // 	if(std::isfinite(offset_external_wrench_(2)))
+  // 	  {
+  // 	    ROS_INFO("[gimbalrotor_contorller]Recorded external wrench for offset: "
+  // 		     "Force: [%.6f, %.6f, %.6f], Torque: [%.6f, %.6f, %.6f]",
+  // 		     offset_external_wrench_(0),
+  // 		     offset_external_wrench_(1),
+  // 		     offset_external_wrench_(2),
+  // 		     offset_external_wrench_(3),
+  // 		     offset_external_wrench_(4),
+  // 		     offset_external_wrench_(5));
+  // 	    offset_record_flag_ = true;
+  // 	    desire_wrench_ -= offset_external_wrench_;
+  // 	  }
+  // 	else{ROS_INFO("[gimbalrotor_controller]Could not record external wrench for offset.");}
+  //     }
+  // }
+  // // reset offset external wrench (when landed or stopped)
+  // if(navigator_->getNaviState() == aerial_robot_navigation::LAND_STATE ||
+  //    navigator_->getNaviState() == aerial_robot_navigation::STOP_STATE)
+  //   {
+  //     if(offset_record_flag_)
+  // 	{
+  // 	  ROS_INFO("[gimbalrotor_contorller]Reset offset wrench");
+  // 	  offset_sample_.clear();
+  // 	  offset_record_flag_ = false;
+  // 	  offset_external_wrench_ = Eigen::VectorXd::Zero(6);
+  // 	  time_hover_ = ros::Time(0);
+  // 	}
+  //   }
 
   Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
   tf::Matrix3x3 uav_rot = estimator_->getOrientation(Frame::COG, estimate_mode_);
@@ -542,16 +556,16 @@ void GimbalrotorController::ExtWrenchControl(){
   //   feedforward_sum_ = Eigen::VectorXd::Zero(6);
   // }
 
-  if(xyz_wrench_control_flag_){
-    Eigen::VectorXd external_acc =  mass_inv * offset_external_wrench_;
-    external_acc[2] -= 9.80665;
-    double x_i_term = pid_controllers_.at(X).getITerm();
-    double y_i_term = pid_controllers_.at(Y).getITerm();
-    double z_i_term = pid_controllers_.at(Z).getITerm();
-    Eigen::Vector3d adjust_acc;
-    adjust_acc[0] = -external_acc[0] - x_i_term;
-    adjust_acc[1] = -external_acc[1] - y_i_term;
-    adjust_acc[2] = -external_acc[2] - z_i_term;
+  if(xyz_wrench_control_flag_ || if_cog_x_vel_mode_){
+    // Eigen::VectorXd external_acc =  mass_inv * offset_external_wrench_;
+    // external_acc[2] -= 9.80665;
+    // double x_i_term = pid_controllers_.at(X).getITerm();
+    // double y_i_term = pid_controllers_.at(Y).getITerm();
+    // double z_i_term = pid_controllers_.at(Z).getITerm();
+    // Eigen::Vector3d adjust_acc;
+    // adjust_acc[0] = -external_acc[0] - x_i_term;
+    // adjust_acc[1] = -external_acc[1] - y_i_term;
+    // adjust_acc[2] = -external_acc[2] - z_i_term;
     // ROS_INFO("[gimbalrotor_contorller]adjust acc: [%.6f, %.6f, %.6f]",
     // 	     adjust_acc[0],
     // 	     adjust_acc[1],
@@ -562,9 +576,9 @@ void GimbalrotorController::ExtWrenchControl(){
     // 	target_acc[1] = target_acc[1] + adjust_acc[1];
     // 	target_acc[2] = target_acc[2] + adjust_acc[2];
     //   }
-    target_acc[0] = target_acc[0] - x_i_term;
-    target_acc[1] = target_acc[1] - y_i_term;
-    target_acc[2] = target_acc[2] - z_i_term + 9.80665;
+    // target_acc[0] = target_acc[0] - x_i_term;
+    // target_acc[1] = target_acc[1] - y_i_term;
+    // target_acc[2] = target_acc[2] - z_i_term + 9.80665;
     navigator_->setTargetAccX(target_acc[0]);
     navigator_->setTargetAccY(target_acc[1]);
     navigator_->setTargetAccZ(target_acc[2]);
@@ -663,6 +677,11 @@ void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
       navigator_->setYControlMode(0);
       navigator_->setZControlMode(0);
     }
+}
+
+void GimbalrotorController::COGXVelModeCallBack(std_msgs::Bool msg)
+{
+  if_cog_x_vel_mode_ = msg.data;
 }
 
 }  // namespace aerial_robot_control

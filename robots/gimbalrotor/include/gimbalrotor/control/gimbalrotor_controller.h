@@ -41,6 +41,7 @@ private:
   ros::Subscriber attaching_flag_sub_;
   ros::Subscriber send_feedforward_switch_flag_sub_;
   ros::Subscriber xyz_wrench_control_flag_sub_;
+  ros::Subscriber cog_x_vel_mode_sub_;  
   ros::Time time_hover_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
@@ -75,6 +76,7 @@ private:
   bool offset_record_flag_;
   bool attaching_flag_, const_err_i_flag_, first_flag_;
   bool xyz_wrench_control_flag_;
+  bool if_cog_x_vel_mode_;
   double err_i_x_, err_i_y_, err_i_z_, err_i_yaw_, err_p_y_;
   double wrench_diff_gain_;
   double acc_shock_thres_;
@@ -100,5 +102,6 @@ private:
   void SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg);
   void FlightStateCallback(std_msgs::UInt8 msg);
   void XYZWrenchControlFlagCallBack(std_msgs::Bool msg);
+  void COGXVelModeCallBack(std_msgs::Bool msg);
 };
 };  // namespace aerial_robot_control
