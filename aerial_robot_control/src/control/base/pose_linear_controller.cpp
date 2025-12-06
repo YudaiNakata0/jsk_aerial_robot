@@ -180,7 +180,8 @@ namespace aerial_robot_control
 
 
     pid_pub_ = nh_.advertise<aerial_robot_msgs::PoseControlPid>("debug/pose/pid", 10);
-
+    feedforward_term_pub_ = nh_.advertise<geometry_msgs::Twist>("debug/pose/feedforward_term", 10);
+    
     /* external wrench estimation*/
     startWrenchEstimation();
   }
@@ -377,6 +378,14 @@ namespace aerial_robot_control
     pid_msg_.yaw.target_d = target_omega_.z();
     pid_msg_.yaw.err_d = target_omega_.z() - omega_.z();
 
+    //feedforward_term
+    feedforward_term_msg_.linear.x = target_acc_.x();
+    feedforward_term_msg_.linear.y = target_acc_.y();
+    feedforward_term_msg_.linear.z = target_acc_.z();
+    feedforward_term_msg_.angular.x = target_ang_acc_.x();
+    feedforward_term_msg_.angular.y = target_ang_acc_.y();
+    feedforward_term_msg_.angular.z = target_ang_acc_.z();
+
     // wrench estimator
     Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
     tf::Matrix3x3 uav_rot = estimator_->getOrientation(Frame::COG, estimate_mode_);
@@ -397,6 +406,7 @@ namespace aerial_robot_control
   {
     /* ros publish */
     pid_pub_.publish(pid_msg_);
+    feedforward_term_pub_.publish(feedforward_term_msg_);
   }
 
   void PoseLinearController::externalWrenchEstimate()
