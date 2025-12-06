@@ -41,6 +41,7 @@ namespace aerial_robot_control
   PoseLinearController::PoseLinearController():
     ControlBase(),
     pid_controllers_(0),
+    pid_controllers_cog_(0),
     pid_reconf_servers_(0),
     pos_(0,0,0), target_pos_(0,0,0),
     vel_(0,0,0), target_vel_(0,0,0),
@@ -73,6 +74,32 @@ namespace aerial_robot_control
     pid_msg_.yaw.p_term.resize(1);
     pid_msg_.yaw.i_term.resize(1);
     pid_msg_.yaw.d_term.resize(1);
+
+    // cog
+    pid_cog_msg_.x.total.resize(1);
+    pid_cog_msg_.x.p_term.resize(1);
+    pid_cog_msg_.x.i_term.resize(1);
+    pid_cog_msg_.x.d_term.resize(1);
+    pid_cog_msg_.y.total.resize(1);
+    pid_cog_msg_.y.p_term.resize(1);
+    pid_cog_msg_.y.i_term.resize(1);
+    pid_cog_msg_.y.d_term.resize(1);
+    pid_cog_msg_.z.total.resize(1);
+    pid_cog_msg_.z.p_term.resize(1);
+    pid_cog_msg_.z.i_term.resize(1);
+    pid_cog_msg_.z.d_term.resize(1);
+    pid_cog_msg_.roll.total.resize(1);
+    pid_cog_msg_.roll.p_term.resize(1);
+    pid_cog_msg_.roll.i_term.resize(1);
+    pid_cog_msg_.roll.d_term.resize(1);
+    pid_cog_msg_.pitch.total.resize(1);
+    pid_cog_msg_.pitch.p_term.resize(1);
+    pid_cog_msg_.pitch.i_term.resize(1);
+    pid_cog_msg_.pitch.d_term.resize(1);
+    pid_cog_msg_.yaw.total.resize(1);
+    pid_cog_msg_.yaw.p_term.resize(1);
+    pid_cog_msg_.yaw.i_term.resize(1);
+    pid_cog_msg_.yaw.d_term.resize(1);
   }
 
   void PoseLinearController::initialize(ros::NodeHandle nh,
@@ -121,7 +148,10 @@ namespace aerial_robot_control
         loadParam(xy_nh);
         pid_controllers_.push_back(PID("x", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
         pid_controllers_.push_back(PID("y", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
-
+	// cog
+        pid_controllers_cog_.push_back(PID("x", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+        pid_controllers_cog_.push_back(PID("y", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	
         std::vector<int> indices = {X, Y};
         pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(xy_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, indices));
@@ -130,11 +160,17 @@ namespace aerial_robot_control
       {
         loadParam(x_nh);
         pid_controllers_.push_back(PID("x", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	// cog
+        pid_controllers_cog_.push_back(PID("x", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	
         pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(x_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, X)));
 
         loadParam(y_nh);
         pid_controllers_.push_back(PID("y", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	// cog
+	pid_controllers_cog_.push_back(PID("y", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	
         pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(y_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, Y)));
       }
@@ -144,6 +180,9 @@ namespace aerial_robot_control
     if(force_landing_descending_rate_ >= 0) force_landing_descending_rate_ = -0.1;
     loadParam(z_nh);
     pid_controllers_.push_back(PID("z", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+    // cog
+    pid_controllers_cog_.push_back(PID("z", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+    
     pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(z_nh));
     pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, Z)));
 
@@ -154,7 +193,11 @@ namespace aerial_robot_control
         loadParam(roll_pitch_nh);
         pid_controllers_.push_back(PID("roll", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
         pid_controllers_.push_back(PID("pitch", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
-        std::vector<int> indices = {ROLL, PITCH};
+	// cog
+	pid_controllers_cog_.push_back(PID("roll", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+        pid_controllers_cog_.push_back(PID("pitch", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+
+	std::vector<int> indices = {ROLL, PITCH};
         pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(roll_pitch_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, indices));
       }
@@ -162,12 +205,18 @@ namespace aerial_robot_control
       {
         loadParam(roll_nh);
         pid_controllers_.push_back(PID("roll", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
-        pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(roll_nh));
+	// cog
+	pid_controllers_cog_.push_back(PID("roll", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	
+	pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(roll_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, ROLL)));
 
         loadParam(pitch_nh);
         pid_controllers_.push_back(PID("pitch", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
-        pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(pitch_nh));
+	// cog
+	pid_controllers_cog_.push_back(PID("pitch", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+	
+	pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(pitch_nh));
         pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, PITCH)));
       }
 
@@ -175,11 +224,15 @@ namespace aerial_robot_control
     loadParam(yaw_nh);
     getParam<bool>(yaw_nh, "need_d_control", need_yaw_d_control_, false);
     pid_controllers_.push_back(PID("yaw", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+    // cog
+    pid_controllers_cog_.push_back(PID("yaw", p_gain, i_gain, d_gain, limit_sum, limit_p, limit_i, limit_d, limit_err_p, limit_err_i, limit_err_d));
+    
     pid_reconf_servers_.push_back(boost::make_shared<PidControlDynamicConfig>(yaw_nh));
     pid_reconf_servers_.back()->setCallback(boost::bind(&PoseLinearController::cfgPidCallback, this, _1, _2, std::vector<int>(1, YAW)));
 
 
     pid_pub_ = nh_.advertise<aerial_robot_msgs::PoseControlPid>("debug/pose/pid", 10);
+    pid_cog_pub_ = nh_.advertise<aerial_robot_msgs::PoseControlPid>("debug/pose/pid_cog", 10);
     feedforward_term_pub_ = nh_.advertise<geometry_msgs::Twist>("debug/pose/feedforward_term", 10);
     
     /* external wrench estimation*/
@@ -192,7 +245,9 @@ namespace aerial_robot_control
     start_rp_integration_ = false;
 
     for(auto& controller: pid_controllers_) controller.reset();
-
+    // cog
+    for(auto& controller: pid_controllers_cog_) controller.reset();
+    
     target_pos_.setValue(0, 0, 0);
     target_vel_.setValue(0, 0, 0);
     target_acc_.setValue(0, 0, 0);
@@ -232,6 +287,16 @@ namespace aerial_robot_control
     target_omega_ = cog_rot.inverse() * target_rot * target_omega; // w.r.t. current cog frame
     target_ang_acc_ = navigator_->getTargetAngAcc();
 
+    // calc in cog
+    tf::Matrix3x3 rot_to_cog = estimator_->getOrientation(Frame::COG, estimate_mode_);
+    tf::Vector3 target_pos_cog = rot_to_cog.inverse() * target_pos_;
+    tf::Vector3 target_vel_cog = rot_to_cog.inverse() * target_vel_;
+    tf::Vector3 err_pos = target_pos_ - pos_;
+    tf::Vector3 err_vel = target_vel_ - vel_;
+    tf::Vector3 err_pos_cog = rot_to_cog.inverse() * err_pos;
+    tf::Vector3 err_vel_cog = rot_to_cog.inverse() * err_vel;
+    tf::Vector3 acc_cog = rot_to_cog.inverse() * target_acc_;
+    
     // time diff
     double du = ros::Time::now().toSec() - control_timestamp_;
 
@@ -309,6 +374,85 @@ namespace aerial_robot_control
         pid_controllers_.at(Z).setErrP(0); // for derived controller which use err_p in feedback control (e.g., LQI)
       }
 
+    
+    // pid controller in cog
+    // x
+    switch(navigator_->getXControlMode())
+      {
+      case aerial_robot_navigation::POS_CONTROL_MODE:
+        pid_controllers_cog_.at(X).update(err_pos_cog.x(), du, err_vel_cog.x(), acc_cog.x());
+        break;
+      case aerial_robot_navigation::VEL_CONTROL_MODE:
+        pid_controllers_cog_.at(X).update(0, du, err_vel_cog.x(), acc_cog.x());
+        break;
+      case aerial_robot_navigation::ACC_CONTROL_MODE:
+        pid_controllers_cog_.at(X).update(0, du, 0, acc_cog.x());
+        break;
+      default:
+        break;
+      }
+
+    if(navigator_->getForceLandingFlag())
+      {
+        pid_controllers_cog_.at(X).reset();
+      }
+
+    // y
+    switch(navigator_->getYControlMode())
+      {
+      case aerial_robot_navigation::POS_CONTROL_MODE:
+        pid_controllers_cog_.at(Y).update(err_pos_cog.y(), du, err_vel_cog.y(), acc_cog.y());
+        break;
+      case aerial_robot_navigation::VEL_CONTROL_MODE:
+        pid_controllers_cog_.at(Y).update(0, du, err_vel_cog.y(), acc_cog.y());
+        break;
+      case aerial_robot_navigation::ACC_CONTROL_MODE:
+        pid_controllers_cog_.at(Y).update(0, du, 0, acc_cog.y());
+        break;
+      default:
+        break;
+      }
+
+    if(navigator_->getForceLandingFlag())
+      {
+        pid_controllers_cog_.at(Y).reset();
+      }
+    
+    // z
+    err_z = err_pos_cog.z();
+    err_v_z = err_vel_cog.z();
+    du_z = du;
+    double acc_z = acc_cog.z();
+    z_p_limit = pid_controllers_cog_.at(Z).getLimitP();
+
+    if(navigator_->getForceLandingFlag())
+      {
+        pid_controllers_cog_.at(Z).setLimitP(0); // no p control in force landing phase
+        err_z = force_landing_descending_rate_;
+        err_v_z = 0;
+        acc_z = 0;
+      }
+
+    switch(navigator_->getZControlMode())
+      {
+      case aerial_robot_navigation::POS_CONTROL_MODE:
+	pid_controllers_cog_.at(Z).update(err_z, du_z, err_v_z, acc_z);
+	break;
+      case aerial_robot_navigation::VEL_CONTROL_MODE:
+	pid_controllers_cog_.at(Z).update(0, du_z, err_v_z, acc_z);
+	break;
+      }
+
+    if(pid_controllers_cog_.at(Z).getErrI() < 0) pid_controllers_.at(Z).setErrI(0);
+
+    if(navigator_->getForceLandingFlag())
+      {
+        pid_controllers_cog_.at(Z).setLimitP(z_p_limit); // revert z p limit
+        pid_controllers_cog_.at(Z).setErrP(0); // for derived controller which use err_p in feedback control (e.g., LQI)
+      }
+    // pid controller in cog (end)
+
+    
     // roll pitch
     double du_rp = du;
     if(!start_rp_integration_)
@@ -367,6 +511,35 @@ namespace aerial_robot_control
     pid_msg_.z.target_d = target_vel_.z();
     pid_msg_.z.err_d = target_vel_.z() - vel_.z();
 
+    /* ros pub cog */
+    pid_cog_msg_.header.stamp.fromSec(estimator_->getImuLatestTimeStamp());
+    pid_cog_msg_.x.total.at(0) = pid_controllers_cog_.at(X).result();
+    pid_cog_msg_.x.p_term.at(0) = pid_controllers_cog_.at(X).getPTerm();
+    pid_cog_msg_.x.i_term.at(0) = pid_controllers_cog_.at(X).getITerm();
+    pid_cog_msg_.x.d_term.at(0) = pid_controllers_cog_.at(X).getDTerm();
+    pid_cog_msg_.x.target_p = target_pos_cog.x();
+    pid_cog_msg_.x.err_p = err_pos_cog.x();
+    pid_cog_msg_.x.target_d = target_vel_cog.x();
+    pid_cog_msg_.x.err_d = err_vel_cog.x();
+
+    pid_cog_msg_.y.total.at(0) = pid_controllers_cog_.at(Y).result();
+    pid_cog_msg_.y.p_term.at(0) = pid_controllers_cog_.at(Y).getPTerm();
+    pid_cog_msg_.y.i_term.at(0) = pid_controllers_cog_.at(Y).getITerm();
+    pid_cog_msg_.y.d_term.at(0) = pid_controllers_cog_.at(Y).getDTerm();
+    pid_cog_msg_.y.target_p = target_pos_cog.y();
+    pid_cog_msg_.y.err_p = err_pos_cog.y();
+    pid_cog_msg_.y.target_d = target_vel_cog.y();
+    pid_cog_msg_.y.err_d = err_vel_cog.y();
+
+    pid_cog_msg_.z.total.at(0) = pid_controllers_cog_.at(Z).result();
+    pid_cog_msg_.z.p_term.at(0) = pid_controllers_cog_.at(Z).getPTerm();
+    pid_cog_msg_.z.i_term.at(0) = pid_controllers_cog_.at(Z).getITerm();
+    pid_cog_msg_.z.d_term.at(0) = pid_controllers_cog_.at(Z).getDTerm();
+    pid_cog_msg_.z.target_p = target_pos_cog.z();
+    pid_cog_msg_.z.err_p = err_pos_cog.z();
+    pid_cog_msg_.z.target_d = target_vel_cog.z();
+    pid_cog_msg_.z.err_d = err_vel_cog.z();
+    
     // omit roll, pitch here
 
     pid_msg_.yaw.total.at(0) = pid_controllers_.at(YAW).result();
@@ -406,6 +579,7 @@ namespace aerial_robot_control
   {
     /* ros publish */
     pid_pub_.publish(pid_msg_);
+    pid_cog_pub_.publish(pid_cog_msg_);
     feedforward_term_pub_.publish(feedforward_term_msg_);
   }
 
