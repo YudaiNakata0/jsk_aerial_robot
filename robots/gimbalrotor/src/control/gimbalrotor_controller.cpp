@@ -124,9 +124,9 @@ void GimbalrotorController::controlCore()
       // 			   pid_controllers_.at(Z).getPTerm());
       // tf::Vector3 p_term_cog = uav_rot.inverse() * p_term_w;
       // target_acc_cog[0] -= p_term_cog[0];
-      target_acc_cog[0] = pid_controllers_cog_.at(X).result();
-      target_acc_cog[1] = pid_controllers_cog_.at(Y).result();
-      target_acc_cog[2] = pid_controllers_cog_.at(Z).result();
+      target_acc_cog[0] = pid_controllers_body_.at(X).result();
+      target_acc_cog[1] = pid_controllers_body_.at(Y).result();
+      target_acc_cog[2] = pid_controllers_body_.at(Z).result();
     }
 
   if (underactuate_)

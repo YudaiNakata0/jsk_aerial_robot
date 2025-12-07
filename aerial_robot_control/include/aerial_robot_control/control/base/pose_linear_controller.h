@@ -82,15 +82,17 @@ namespace aerial_robot_control
 
   protected:
     ros::Publisher pid_pub_;
-    ros::Publisher pid_cog_pub_;
+    ros::Publisher pid_body_pub_;
     ros::Publisher estimate_external_wrench_pub_;
     ros::Publisher feedforward_term_pub_;
+    ros::Publisher feedforward_term_body_pub_;
     std::vector<PID> pid_controllers_;
-    std::vector<PID> pid_controllers_cog_;
+    std::vector<PID> pid_controllers_body_;
     std::vector<boost::shared_ptr<PidControlDynamicConfig> > pid_reconf_servers_;
     aerial_robot_msgs::PoseControlPid pid_msg_;
-    aerial_robot_msgs::PoseControlPid pid_cog_msg_;
+    aerial_robot_msgs::PoseControlPid pid_body_msg_;
     geometry_msgs::Twist feedforward_term_msg_;
+    geometry_msgs::Twist feedforward_term_body_msg_;
 
     bool need_yaw_d_control_;
     bool start_rp_integration_;
