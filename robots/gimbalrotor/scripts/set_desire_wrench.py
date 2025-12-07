@@ -119,7 +119,7 @@ def main():
                     pub_y_control_mode.publish(msg_y_ctrl)
                     print("y control -> pos")
                 if mode == 3:
-                    msg_z_ctrl.data = 1
+                    msg_z_ctrl.data = 0
                     pub_z_control_mode.publish(msg_z_ctrl)
                     print("z control -> pos")
                     
