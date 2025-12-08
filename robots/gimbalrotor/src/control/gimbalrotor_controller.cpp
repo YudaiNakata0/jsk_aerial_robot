@@ -41,7 +41,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   xyz_wrench_control_flag_sub_ = nh_.subscribe("xyz_wrench_control_flag", 1, &GimbalrotorController::XYZWrenchControlFlagCallBack, this);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
-  body_x_vel_mode_sub_ = nh_.subscribe("cog_x_vel_mode", 1, &GimbalrotorController::BodyXVelModeCallBack, this);
+  body_x_vel_mode_sub_ = nh_.subscribe("body_x_vel_mode", 1, &GimbalrotorController::BodyXVelModeCallBack, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
   desire_wrench_ = Eigen::VectorXd::Zero(6);
   filtered_ftsensor_wrench_ = Eigen::VectorXd::Zero(6);
@@ -662,13 +662,7 @@ void GimbalrotorController::SendFeedforwardSwitchFlagCallBack(std_msgs::Bool msg
 void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
 {
   xyz_wrench_control_flag_ = msg.data;
-  if(msg.data)
-    {
-      navigator_->setXControlMode(1);
-      navigator_->setYControlMode(1);
-      navigator_->setZControlMode(1);
-    }
-  else
+  if(!msg.data)
     {
       tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);
       navigator_->setTargetPosX(pos_cog.x());
