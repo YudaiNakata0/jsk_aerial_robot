@@ -56,6 +56,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   first_flag_ = true;
   offset_record_flag_ = false;
   offset_external_wrench_ = Eigen::VectorXd::Zero(6);
+  prev_p_term_ = Eigen::VectorXd::Zero(6);
   
   flight_state_ = 0;
   target_acc_gain_ = 1.0;
@@ -556,6 +557,14 @@ void GimbalrotorController::ExtWrenchControl(){
   //   // navigator_->setTargetAngAccZ(0);
   //   feedforward_sum_ = Eigen::VectorXd::Zero(6);
   // }
+
+  // record offset(p term)
+  if(navigator_->getXControlMode() == 0){prev_p_term_[0] = pid_controllers_.at(X).getPTerm();}
+  else{target_acc[0] += prev_p_term_[0];}
+  if(navigator_->getYControlMode() == 0){prev_p_term_[1] = pid_controllers_.at(Y).getPTerm();}
+  else{target_acc[1] += prev_p_term_[1];}
+  if(navigator_->getZControlMode() == 0){prev_p_term_[2] = pid_controllers_.at(Z).getPTerm();}
+  else{target_acc[2] += prev_p_term_[2];}
 
   if(xyz_wrench_control_flag_ || if_body_x_vel_mode_){
     // Eigen::VectorXd external_acc =  mass_inv * offset_external_wrench_;
