@@ -41,7 +41,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   xyz_wrench_control_flag_sub_ = nh_.subscribe("xyz_wrench_control_flag", 1, &GimbalrotorController::XYZWrenchControlFlagCallBack, this);
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
-  body_x_vel_mode_sub_ = nh_.subscribe("body_x_vel_mode", 1, &GimbalrotorController::BodyXVelModeCallBack, this);
+  // body_x_vel_mode_sub_ = nh_.subscribe("body_x_vel_mode", 1, &GimbalrotorController::BodyXVelModeCallBack, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
   desire_wrench_ = Eigen::VectorXd::Zero(6);
   filtered_ftsensor_wrench_ = Eigen::VectorXd::Zero(6);
@@ -118,18 +118,18 @@ void GimbalrotorController::controlCore()
   tf::Vector3 target_acc_cog = uav_rot.inverse() * target_acc_w;
   Eigen::VectorXd target_wrench_acc_cog = Eigen::VectorXd::Zero(6);
 
-  if(if_body_x_vel_mode_)
-    {
-      // tf::Vector3 p_term_w(pid_controllers_.at(X).getPTerm(),
-      // 			   pid_controllers_.at(Y).getPTerm(),
-      // 			   pid_controllers_.at(Z).getPTerm());
-      // tf::Vector3 p_term_cog = uav_rot.inverse() * p_term_w;
-      // target_acc_cog[0] -= p_term_cog[0];
-      target_acc_cog[0] = pid_controllers_body_.at(X).result();
-      target_acc_cog[1] = pid_controllers_body_.at(Y).result();
-      target_acc_cog[2] = pid_controllers_body_.at(Z).result();
-      target_acc_cog = uav_rot.inverse() * target_acc_cog;
-    }
+  // if(if_body_x_vel_mode_)
+  //   {
+  //     // tf::Vector3 p_term_w(pid_controllers_.at(X).getPTerm(),
+  //     // 			   pid_controllers_.at(Y).getPTerm(),
+  //     // 			   pid_controllers_.at(Z).getPTerm());
+  //     // tf::Vector3 p_term_cog = uav_rot.inverse() * p_term_w;
+  //     // target_acc_cog[0] -= p_term_cog[0];
+  //     target_acc_cog[0] = pid_controllers_body_.at(X).result();
+  //     target_acc_cog[1] = pid_controllers_body_.at(Y).result();
+  //     target_acc_cog[2] = pid_controllers_body_.at(Z).result();
+  //     target_acc_cog = uav_rot.inverse() * target_acc_cog;
+  //   }
 
   if (underactuate_)
     target_wrench_acc_cog.head(3) = Eigen::Vector3d(target_acc_dash.x(), target_acc_dash.y(), target_acc_dash.z());

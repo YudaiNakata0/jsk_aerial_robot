@@ -404,82 +404,82 @@ namespace aerial_robot_control
       }
 
     
-    // pid controller in body
-    // x
-    switch(navigator_->getXControlMode())
-      {
-      case aerial_robot_navigation::POS_CONTROL_MODE:
-        pid_controllers_body_.at(X).update(err_pos_cog.x(), du, err_vel_cog.x(), acc_cog.x());
-        break;
-      case aerial_robot_navigation::VEL_CONTROL_MODE:
-        pid_controllers_body_.at(X).update(0, du, err_vel_cog.x(), acc_cog.x());
-        break;
-      case aerial_robot_navigation::ACC_CONTROL_MODE:
-        pid_controllers_body_.at(X).update(0, du, 0, acc_cog.x());
-        break;
-      default:
-        break;
-      }
+    // // pid controller in body
+    // // x
+    // switch(navigator_->getXControlMode())
+    //   {
+    //   case aerial_robot_navigation::POS_CONTROL_MODE:
+    //     pid_controllers_body_.at(X).update(err_pos_cog.x(), du, err_vel_cog.x(), acc_cog.x());
+    //     break;
+    //   case aerial_robot_navigation::VEL_CONTROL_MODE:
+    //     pid_controllers_body_.at(X).update(0, du, err_vel_cog.x(), acc_cog.x());
+    //     break;
+    //   case aerial_robot_navigation::ACC_CONTROL_MODE:
+    //     pid_controllers_body_.at(X).update(0, du, 0, acc_cog.x());
+    //     break;
+    //   default:
+    //     break;
+    //   }
 
-    if(navigator_->getForceLandingFlag())
-      {
-        pid_controllers_body_.at(X).reset();
-      }
+    // if(navigator_->getForceLandingFlag())
+    //   {
+    //     pid_controllers_body_.at(X).reset();
+    //   }
 
-    // y
-    switch(navigator_->getYControlMode())
-      {
-      case aerial_robot_navigation::POS_CONTROL_MODE:
-        pid_controllers_body_.at(Y).update(err_pos_cog.y(), du, err_vel_cog.y(), acc_cog.y());
-        break;
-      case aerial_robot_navigation::VEL_CONTROL_MODE:
-        pid_controllers_body_.at(Y).update(0, du, err_vel_cog.y(), acc_cog.y());
-        break;
-      case aerial_robot_navigation::ACC_CONTROL_MODE:
-        pid_controllers_body_.at(Y).update(0, du, 0, acc_cog.y());
-        break;
-      default:
-        break;
-      }
+    // // y
+    // switch(navigator_->getYControlMode())
+    //   {
+    //   case aerial_robot_navigation::POS_CONTROL_MODE:
+    //     pid_controllers_body_.at(Y).update(err_pos_cog.y(), du, err_vel_cog.y(), acc_cog.y());
+    //     break;
+    //   case aerial_robot_navigation::VEL_CONTROL_MODE:
+    //     pid_controllers_body_.at(Y).update(0, du, err_vel_cog.y(), acc_cog.y());
+    //     break;
+    //   case aerial_robot_navigation::ACC_CONTROL_MODE:
+    //     pid_controllers_body_.at(Y).update(0, du, 0, acc_cog.y());
+    //     break;
+    //   default:
+    //     break;
+    //   }
 
-    if(navigator_->getForceLandingFlag())
-      {
-        pid_controllers_body_.at(Y).reset();
-      }
+    // if(navigator_->getForceLandingFlag())
+    //   {
+    //     pid_controllers_body_.at(Y).reset();
+    //   }
     
-    // z
-    err_z = err_pos_cog.z();
-    err_v_z = err_vel_cog.z();
-    du_z = du;
-    double acc_z = acc_cog.z();
-    z_p_limit = pid_controllers_body_.at(Z).getLimitP();
+    // // z
+    // err_z = err_pos_cog.z();
+    // err_v_z = err_vel_cog.z();
+    // du_z = du;
+    // double acc_z = acc_cog.z();
+    // z_p_limit = pid_controllers_body_.at(Z).getLimitP();
 
-    if(navigator_->getForceLandingFlag())
-      {
-        pid_controllers_body_.at(Z).setLimitP(0); // no p control in force landing phase
-        err_z = force_landing_descending_rate_;
-        err_v_z = 0;
-        acc_z = 0;
-      }
+    // if(navigator_->getForceLandingFlag())
+    //   {
+    //     pid_controllers_body_.at(Z).setLimitP(0); // no p control in force landing phase
+    //     err_z = force_landing_descending_rate_;
+    //     err_v_z = 0;
+    //     acc_z = 0;
+    //   }
 
-    switch(navigator_->getZControlMode())
-      {
-      case aerial_robot_navigation::POS_CONTROL_MODE:
-	pid_controllers_body_.at(Z).update(err_z, du_z, err_v_z, acc_z);
-	break;
-      case aerial_robot_navigation::VEL_CONTROL_MODE:
-	pid_controllers_body_.at(Z).update(0, du_z, err_v_z, acc_z);
-	break;
-      }
+    // switch(navigator_->getZControlMode())
+    //   {
+    //   case aerial_robot_navigation::POS_CONTROL_MODE:
+    // 	pid_controllers_body_.at(Z).update(err_z, du_z, err_v_z, acc_z);
+    // 	break;
+    //   case aerial_robot_navigation::VEL_CONTROL_MODE:
+    // 	pid_controllers_body_.at(Z).update(0, du_z, err_v_z, acc_z);
+    // 	break;
+    //   }
 
-    if(pid_controllers_body_.at(Z).getErrI() < 0) pid_controllers_.at(Z).setErrI(0);
+    // if(pid_controllers_body_.at(Z).getErrI() < 0) pid_controllers_body_.at(Z).setErrI(0);
 
-    if(navigator_->getForceLandingFlag())
-      {
-        pid_controllers_body_.at(Z).setLimitP(z_p_limit); // revert z p limit
-        pid_controllers_body_.at(Z).setErrP(0); // for derived controller which use err_p in feedback control (e.g., LQI)
-      }
-    // pid controller in body (end)
+    // if(navigator_->getForceLandingFlag())
+    //   {
+    //     pid_controllers_body_.at(Z).setLimitP(z_p_limit); // revert z p limit
+    //     pid_controllers_body_.at(Z).setErrP(0); // for derived controller which use err_p in feedback control (e.g., LQI)
+    //   }
+    // // pid controller in body (end)
 
     
     // roll pitch
