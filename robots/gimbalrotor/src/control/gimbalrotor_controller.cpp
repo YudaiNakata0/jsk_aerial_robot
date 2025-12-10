@@ -57,6 +57,9 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   offset_record_flag_ = false;
   offset_external_wrench_ = Eigen::VectorXd::Zero(6);
   prev_p_term_ = Eigen::VectorXd::Zero(6);
+  offset_p_term_bx_ = Eigen::VectorXd::Zero(3);
+  offset_p_term_by_ = Eigen::VectorXd::Zero(3);
+  offset_p_term_bz_ = Eigen::VectorXd::Zero(3);
   
   flight_state_ = 0;
   target_acc_gain_ = 1.0;
@@ -560,11 +563,18 @@ void GimbalrotorController::ExtWrenchControl(){
 
   // record offset(p term)
   if(navigator_->getXControlMode() == 0){prev_p_term_[0] = pid_controllers_.at(X).getPTerm();}
-  else{target_acc[0] += prev_p_term_[0];}
+  else if(navigator_->getXControlMode() == 1){target_acc[0] += prev_p_term_[0];}
   if(navigator_->getYControlMode() == 0){prev_p_term_[1] = pid_controllers_.at(Y).getPTerm();}
-  else{target_acc[1] += prev_p_term_[1];}
+  else if(navigator_->getYControlMode() == 1){target_acc[1] += prev_p_term_[1];}
   if(navigator_->getZControlMode() == 0){prev_p_term_[2] = pid_controllers_.at(Z).getPTerm();}
-  else{target_acc[2] += prev_p_term_[2];}
+  else if(navigator_->getZControlMode() == 1){target_acc[2] += prev_p_term_[2];}
+
+  if(navigator_->getBodyXControlMode() == 0){offset_p_term_bx_ = prev_p_term_.head(3).dot(w_base_bx_) * w_base_bx_;}
+  else if(navigator_->getBodyXControlMode() == 1){target_acc += offset_p_term_bx_;}
+  if(navigator_->getBodyYControlMode() == 0){offset_p_term_by_ = prev_p_term_.head(3).dot(w_base_by_) * w_base_by_;}
+  else if(navigator_->getBodyYControlMode() == 1){target_acc += offset_p_term_by_;}
+  if(navigator_->getBodyZControlMode() == 0){offset_p_term_bz_ = prev_p_term_.head(3).dot(w_base_bz_) * w_base_bz_;}
+  else if(navigator_->getBodyZControlMode() == 1){target_acc += offset_p_term_bz_;}
 
   navigator_->setTargetAccX(target_acc[0]);
   navigator_->setTargetAccY(target_acc[1]);

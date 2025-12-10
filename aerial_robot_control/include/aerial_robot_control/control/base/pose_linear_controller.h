@@ -107,6 +107,8 @@ namespace aerial_robot_control
     tf::Vector3 target_acc_, target_ang_acc_;
     tf::Vector3 rpy_, target_rpy_;
     tf::Vector3 omega_, target_omega_;
+    tf::Matrix3x3 body_orientation_;
+    Eigen::Vector3d w_base_bx_, w_base_by_, w_base_bz_;
 
     std::mutex wrench_mutex_;
     boost::thread wrench_estimate_thread_;

@@ -48,6 +48,7 @@ namespace aerial_robot_control
     rpy_(0,0,0), target_rpy_(0,0,0),
     target_acc_(0,0,0),
     target_omega_(0,0,0),
+    w_base_bx_(0,0,0), w_base_by_(0,0,0), w_base_bz_(0,0,0),
     start_rp_integration_(false)
   {
     pid_msg_.x.total.resize(1);
@@ -290,6 +291,7 @@ namespace aerial_robot_control
 
     // calc in body
     tf::Matrix3x3 rot_to_body = estimator_->getOrientation(Frame::BASELINK, estimate_mode_);
+    body_orientation_ = rot_to_body;
     tf::Matrix3x3 r_inv = rot_to_body.inverse();
     tf::Vector3 target_pos_cog = rot_to_body.inverse() * target_pos_;
     tf::Vector3 target_vel_cog = rot_to_body.inverse() * target_vel_;
@@ -311,14 +313,17 @@ namespace aerial_robot_control
 
 
     // base vectors (unit vectors) of body frame (in world frame)
-    tf::Vector3 w_u_bx = rot_to_body * tf::Vector3(1, 0, 0);
-    tf::Vector3 w_u_by = rot_to_body * tf::Vector3(0, 1, 0);
-    tf::Vector3 w_u_bz = rot_to_body * tf::Vector3(0, 0, 1);
+    tf::Vector3 w_base_bx_tf = rot_to_body * tf::Vector3(1, 0, 0);
+    tf::Vector3 w_base_by_tf = rot_to_body * tf::Vector3(0, 1, 0);
+    tf::Vector3 w_base_bz_tf = rot_to_body * tf::Vector3(0, 0, 1);
+    w_base_bx_ << w_base_bx_tf.x(), w_base_bx_tf.y(), w_base_bx_tf.z();
+    w_base_by_ << w_base_by_tf.x(), w_base_by_tf.y(), w_base_by_tf.z();
+    w_base_bz_ << w_base_bz_tf.x(), w_base_bz_tf.y(), w_base_bz_tf.z();
 
     // decompose position error by body frame base (velue in world frame)
-    tf::Vector3 w_err_pos_bx = err_pos.dot(w_u_bx) * w_u_bx;
-    tf::Vector3 w_err_pos_by = err_pos.dot(w_u_by) * w_u_by;
-    tf::Vector3 w_err_pos_bz = err_pos.dot(w_u_bz) * w_u_bz;
+    tf::Vector3 w_err_pos_bx = err_pos.dot(w_base_bx_tf) * w_base_bx_tf;
+    tf::Vector3 w_err_pos_by = err_pos.dot(w_base_by_tf) * w_base_by_tf;
+    tf::Vector3 w_err_pos_bz = err_pos.dot(w_base_bz_tf) * w_base_bz_tf;
 
     // projection
     bool if_bx_vel = navigator_->getBodyXControlMode();

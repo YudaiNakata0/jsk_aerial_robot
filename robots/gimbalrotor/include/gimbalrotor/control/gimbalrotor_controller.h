@@ -65,6 +65,9 @@ private:
   Eigen::VectorXd offset_external_wrench_;
   std::vector<Eigen::VectorXd> offset_sample_;
   Eigen::VectorXd prev_p_term_;
+  Eigen::VectorXd offset_p_term_bx_;
+  Eigen::VectorXd offset_p_term_by_;
+  Eigen::VectorXd offset_p_term_bz_;
 
   double candidate_yaw_term_;
   int gimbal_dof_;
