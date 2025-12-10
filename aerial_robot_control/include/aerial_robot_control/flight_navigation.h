@@ -71,6 +71,13 @@ namespace aerial_robot_navigation
     inline uint8_t getZControlMode(){  return (uint8_t)z_control_mode_;}
     inline void setZControlMode(uint8_t mode){  z_control_mode_ = mode;}
 
+    inline uint8_t getBodyXControlMode(){  return (uint8_t)body_x_control_mode_;}
+    inline void setBodyXControlMode(uint8_t mode){  body_x_control_mode_ = mode;}
+    inline uint8_t getBodyYControlMode(){  return (uint8_t)body_y_control_mode_;}
+    inline void setBodyYControlMode(uint8_t mode){  body_y_control_mode_ = mode;}
+    inline uint8_t getBodyZControlMode(){  return (uint8_t)body_z_control_mode_;}
+    inline void setBodyZControlMode(uint8_t mode){  body_z_control_mode_ = mode;}
+
     inline uint8_t getControlframe(){  return (uint8_t)control_frame_;}
     inline void setControlframe(uint8_t frame_type){  control_frame_ = frame_type;}
 
@@ -246,6 +253,9 @@ namespace aerial_robot_navigation
     ros::Publisher  x_control_mode_pub_;
     ros::Publisher  y_control_mode_pub_;
     ros::Publisher  z_control_mode_pub_;
+    ros::Publisher  body_x_control_mode_pub_;
+    ros::Publisher  body_y_control_mode_pub_;
+    ros::Publisher  body_z_control_mode_pub_;
     ros::Subscriber navi_sub_;
     ros::Subscriber single_goal_sub_;
     ros::Subscriber simple_move_base_goal_sub_;
@@ -260,6 +270,9 @@ namespace aerial_robot_navigation
     ros::Subscriber x_ctrl_mode_sub_;
     ros::Subscriber y_ctrl_mode_sub_;
     ros::Subscriber z_ctrl_mode_sub_;
+    ros::Subscriber body_x_ctrl_mode_sub_;
+    ros::Subscriber body_y_ctrl_mode_sub_;
+    ros::Subscriber body_z_ctrl_mode_sub_;
     ros::Subscriber joy_stick_sub_;
     ros::Subscriber flight_nav_sub_;
     ros::Subscriber stop_teleop_sub_;
@@ -277,6 +290,9 @@ namespace aerial_robot_navigation
     int  prev_y_control_mode_;    
     bool xy_vel_mode_pos_ctrl_takeoff_;
     int  z_control_mode_;
+    int body_x_control_mode_;
+    int body_y_control_mode_;
+    int body_z_control_mode_;
 
     double loop_du_;
     int  control_frame_;
@@ -607,6 +623,93 @@ namespace aerial_robot_navigation
             {
               z_control_mode_ = ACC_CONTROL_MODE;
               ROS_INFO("z acceleration control mode");
+	    }
+	}
+    }
+
+    void bodyXControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    {
+      if(getNaviState() > START_STATE)
+        {
+          if(msg->data == 0)
+            {
+              setTargetXFromCurrentState();
+	      setTargetYFromCurrentState();
+	      setTargetZFromCurrentState();
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_x_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("(body)x position control mode");
+            }
+          if(msg->data == 1)
+            {
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_x_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("(body)x velocity control mode");
+            }
+          if(msg->data == 2)
+            {
+              body_x_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("(body)x acceleration control mode");
+            }
+        }
+    }
+
+    void bodyYControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    {
+      if(getNaviState() > START_STATE)
+        {
+          if(msg->data == 0)
+            {
+              setTargetXFromCurrentState();
+	      setTargetYFromCurrentState();
+	      setTargetZFromCurrentState();
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_y_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("(body)y position control mode");
+            }
+          if(msg->data == 1)
+            {
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_y_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("(body)y velocity control mode");
+            }
+          if(msg->data == 2)
+            {
+              body_y_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("(body)y acceleration control mode");
+            }
+        }
+    }
+
+    void bodyZControlModeCallback(const std_msgs::Int8ConstPtr & msg)
+    {
+      if(getNaviState() > START_STATE)
+        {
+          if(msg->data == 0)
+            {
+	      setTargetXFromCurrentState();
+	      setTargetYFromCurrentState();
+	      setTargetZFromCurrentState();
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_z_control_mode_ = POS_CONTROL_MODE;
+              ROS_INFO("(body)z position control mode");
+	    }
+	  if(msg->data == 1)
+            {
+              setTargetZeroVel();
+              setTargetZeroAcc();
+              body_z_control_mode_ = VEL_CONTROL_MODE;
+              ROS_INFO("(body)z velocity control mode");
+            }
+          if(msg->data == 2)
+            {
+              body_z_control_mode_ = ACC_CONTROL_MODE;
+              ROS_INFO("(body)z acceleration control mode");
 	    }
 	}
     }

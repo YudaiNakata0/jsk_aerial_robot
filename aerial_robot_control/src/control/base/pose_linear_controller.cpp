@@ -288,21 +288,43 @@ namespace aerial_robot_control
     target_omega_ = cog_rot.inverse() * target_rot * target_omega; // w.r.t. current cog frame
     target_ang_acc_ = navigator_->getTargetAngAcc();
 
-    // calc in cog
-    tf::Matrix3x3 rot_to_cog = estimator_->getOrientation(Frame::BASELINK, estimate_mode_);
-    tf::Matrix3x3 r_inv = rot_to_cog.inverse();
-    tf::Vector3 target_pos_cog = rot_to_cog.inverse() * target_pos_;
-    tf::Vector3 target_vel_cog = rot_to_cog.inverse() * target_vel_;
+    // calc in body
+    tf::Matrix3x3 rot_to_body = estimator_->getOrientation(Frame::BASELINK, estimate_mode_);
+    tf::Matrix3x3 r_inv = rot_to_body.inverse();
+    tf::Vector3 target_pos_cog = rot_to_body.inverse() * target_pos_;
+    tf::Vector3 target_vel_cog = rot_to_body.inverse() * target_vel_;
     tf::Vector3 err_pos = target_pos_ - pos_;
     tf::Vector3 err_vel = target_vel_ - vel_;
-    tf::Vector3 err_pos_cog = rot_to_cog.inverse() * err_pos;
-    tf::Vector3 err_vel_cog = rot_to_cog.inverse() * err_vel;
-    tf::Vector3 acc_cog = rot_to_cog.inverse() * target_acc_;
-    // // debug
+    tf::Vector3 err_pos_cog = rot_to_body.inverse() * err_pos;
+    tf::Vector3 err_vel_cog = rot_to_body.inverse() * err_vel;
+    tf::Vector3 acc_cog = rot_to_body.inverse() * target_acc_;
+
+    // debug
     // ROS_INFO_STREAM("rot_to_cog:\n"
+    // 		    << "[" << rot_to_body[0][0] << ", " << rot_to_body[0][1] << ", " << rot_to_body[0][2] << "]\n"
+    // 		    << "[" << rot_to_body[1][0] << ", " << rot_to_body[1][1] << ", " << rot_to_body[1][2] << "]\n"
+    // 		    << "[" << rot_to_body[2][0] << ", " << rot_to_body[2][1] << ", " << rot_to_body[2][2] << "]");
+    // ROS_INFO_STREAM("rot_to_cog_inv:\n"
     // 		    << "[" << r_inv[0][0] << ", " << r_inv[0][1] << ", " << r_inv[0][2] << "]\n"
     // 		    << "[" << r_inv[1][0] << ", " << r_inv[1][1] << ", " << r_inv[1][2] << "]\n"
     // 		    << "[" << r_inv[2][0] << ", " << r_inv[2][1] << ", " << r_inv[2][2] << "]");
+
+
+    // base vectors (unit vectors) of body frame (in world frame)
+    tf::Vector3 w_u_bx = rot_to_body * tf::Vector3(1, 0, 0);
+    tf::Vector3 w_u_by = rot_to_body * tf::Vector3(0, 1, 0);
+    tf::Vector3 w_u_bz = rot_to_body * tf::Vector3(0, 0, 1);
+
+    // decompose position error by body frame base (velue in world frame)
+    tf::Vector3 w_err_pos_bx = err_pos.dot(w_u_bx) * w_u_bx;
+    tf::Vector3 w_err_pos_by = err_pos.dot(w_u_by) * w_u_by;
+    tf::Vector3 w_err_pos_bz = err_pos.dot(w_u_bz) * w_u_bz;
+
+    // projection
+    bool if_bx_vel = navigator_->getBodyXControlMode();
+    bool if_by_vel = navigator_->getBodyYControlMode();
+    bool if_bz_vel = navigator_->getBodyZControlMode();
+    err_pos = err_pos - (if_bx_vel * w_err_pos_bx + if_by_vel * w_err_pos_by + if_bz_vel * w_err_pos_bz);
     
     // time diff
     double du = ros::Time::now().toSec() - control_timestamp_;
@@ -311,7 +333,7 @@ namespace aerial_robot_control
     switch(navigator_->getXControlMode())
       {
       case aerial_robot_navigation::POS_CONTROL_MODE:
-        pid_controllers_.at(X).update(target_pos_.x() - pos_.x(), du, target_vel_.x() - vel_.x(), target_acc_.x());
+        pid_controllers_.at(X).update(err_pos.x(), du, target_vel_.x() - vel_.x(), target_acc_.x());
         break;
       case aerial_robot_navigation::VEL_CONTROL_MODE:
         pid_controllers_.at(X).update(0, du, target_vel_.x() - vel_.x(), target_acc_.x());
@@ -332,7 +354,7 @@ namespace aerial_robot_control
     switch(navigator_->getYControlMode())
       {
       case aerial_robot_navigation::POS_CONTROL_MODE:
-        pid_controllers_.at(Y).update(target_pos_.y() - pos_.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
+        pid_controllers_.at(Y).update(err_pos.y(), du, target_vel_.y() - vel_.y(), target_acc_.y());
         break;
       case aerial_robot_navigation::VEL_CONTROL_MODE:
         pid_controllers_.at(Y).update(0, du, target_vel_.y() - vel_.y(), target_acc_.y());
@@ -350,7 +372,7 @@ namespace aerial_robot_control
       }
     
     // z
-    double err_z = target_pos_.z() - pos_.z();
+    double err_z = err_pos.z();
     double err_v_z = target_vel_.z() - vel_.z();
     double du_z = du;
     double z_p_limit = pid_controllers_.at(Z).getLimitP();
@@ -382,7 +404,7 @@ namespace aerial_robot_control
       }
 
     
-    // pid controller in cog
+    // pid controller in body
     // x
     switch(navigator_->getXControlMode())
       {
@@ -457,7 +479,7 @@ namespace aerial_robot_control
         pid_controllers_body_.at(Z).setLimitP(z_p_limit); // revert z p limit
         pid_controllers_body_.at(Z).setErrP(0); // for derived controller which use err_p in feedback control (e.g., LQI)
       }
-    // pid controller in cog (end)
+    // pid controller in body (end)
 
     
     // roll pitch
@@ -518,7 +540,7 @@ namespace aerial_robot_control
     pid_msg_.z.target_d = target_vel_.z();
     pid_msg_.z.err_d = target_vel_.z() - vel_.z();
 
-    /* ros pub cog */
+    /* ros pub (body) */
     pid_body_msg_.header.stamp.fromSec(estimator_->getImuLatestTimeStamp());
     pid_body_msg_.x.total.at(0) = pid_controllers_body_.at(X).result();
     pid_body_msg_.x.p_term.at(0) = pid_controllers_body_.at(X).getPTerm();

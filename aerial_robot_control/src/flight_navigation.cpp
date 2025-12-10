@@ -64,7 +64,9 @@ void BaseNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   x_ctrl_mode_sub_ = teleop_nh.subscribe("x_ctrl_mode", 1, &BaseNavigator::xControlModeCallback, this);
   y_ctrl_mode_sub_ = teleop_nh.subscribe("y_ctrl_mode", 1, &BaseNavigator::yControlModeCallback, this);
   z_ctrl_mode_sub_ = teleop_nh.subscribe("z_ctrl_mode", 1, &BaseNavigator::zControlModeCallback, this);
-
+  body_x_ctrl_mode_sub_ = teleop_nh.subscribe("body_x_ctrl_mode", 1, &BaseNavigator::bodyXControlModeCallback, this);
+  body_y_ctrl_mode_sub_ = teleop_nh.subscribe("body_y_ctrl_mode", 1, &BaseNavigator::bodyYControlModeCallback, this);
+  body_z_ctrl_mode_sub_ = teleop_nh.subscribe("body_z_ctrl_mode", 1, &BaseNavigator::bodyZControlModeCallback, this);
 
   ros::TransportHints joy_transport_hints;
 #ifdef ARM_MELODIC // https://github.com/ros/ros_comm/issues/1404
@@ -83,7 +85,13 @@ void BaseNavigator::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   x_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("x_control_mode", 1);
   y_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("y_control_mode", 1);
   z_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("z_control_mode", 1);
+  body_x_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("body_x_control_mode", 1);
+  body_y_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("body_y_control_mode", 1);
+  body_z_control_mode_pub_ = nh_.advertise<std_msgs::UInt8>("body_z_control_mode", 1);
 
+  body_x_control_mode_ = 0;
+  body_y_control_mode_ = 0;
+  body_z_control_mode_ = 0;
   estimate_mode_ = estimator_->getEstimateMode();
   force_landing_start_time_ = ros::Time::now();
 }
@@ -940,6 +948,15 @@ void BaseNavigator::update()
   std_msgs::UInt8 z_control_mode_msg;
   z_control_mode_msg.data = z_control_mode_;
   z_control_mode_pub_.publish(z_control_mode_msg);
+  std_msgs::UInt8 body_x_control_mode_msg;
+  body_x_control_mode_msg.data = body_x_control_mode_;
+  body_x_control_mode_pub_.publish(body_x_control_mode_msg);
+  std_msgs::UInt8 body_y_control_mode_msg;
+  body_y_control_mode_msg.data = body_y_control_mode_;
+  body_y_control_mode_pub_.publish(body_y_control_mode_msg);
+  std_msgs::UInt8 body_z_control_mode_msg;
+  body_z_control_mode_msg.data = body_z_control_mode_;
+  body_z_control_mode_pub_.publish(body_z_control_mode_msg);
 }
 
 void BaseNavigator::updateLandCommand()

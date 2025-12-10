@@ -566,6 +566,10 @@ void GimbalrotorController::ExtWrenchControl(){
   if(navigator_->getZControlMode() == 0){prev_p_term_[2] = pid_controllers_.at(Z).getPTerm();}
   else{target_acc[2] += prev_p_term_[2];}
 
+  navigator_->setTargetAccX(target_acc[0]);
+  navigator_->setTargetAccY(target_acc[1]);
+  navigator_->setTargetAccZ(target_acc[2]);
+
   if(xyz_wrench_control_flag_ || if_body_x_vel_mode_){
     // Eigen::VectorXd external_acc =  mass_inv * offset_external_wrench_;
     // external_acc[2] -= 9.80665;
