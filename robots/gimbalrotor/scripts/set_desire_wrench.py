@@ -160,7 +160,7 @@ def main():
                         msg_z_ctrl.data = 0
                         pub_z_control_mode.publish(msg_z_ctrl)
                         print("(world)z control -> pos")
-                    elif frame_mode == 0:
+                    elif frame_mode == 1:
                         msg_bz_ctrl.data = 0
                         pub_bz_control_mode.publish(msg_bz_ctrl)
                         print("(body)z control -> pos")
