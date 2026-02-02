@@ -281,6 +281,7 @@ namespace aerial_robot_control
     tf::Matrix3x3 cog_rot = estimator_->getOrientation(Frame::BASELINK, estimate_mode_) * tf::Matrix3x3(cog2baselink_rot).inverse();
     double r, p, y; cog_rot.getRPY(r, p, y);
     rpy_.setValue(r, p, y);
+    // ROS_INFO_STREAM("rpy:" << "[" << r << "," << p << "," << y << "]");
 
     omega_ = estimator_->getAngularVel(Frame::COG, estimate_mode_);
     target_rpy_ = navigator_->getTargetRPY();

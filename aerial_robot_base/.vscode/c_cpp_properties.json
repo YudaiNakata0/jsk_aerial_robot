@@ -1,0 +1,53 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/nakata/ros/sphere_printer_ws/devel/include/**",
+        "/home/nakata/ros/magician_ws/devel/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/devel/include/**",
+        "/opt/ros/one/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_base/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_control/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_estimation/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_model/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_simulation/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/sensor_interface/cfs_sensor/include/**",
+        "/home/nakata/ros/test_ws/src/TCP-IP-ROS-6AXis/dobot_bringup/include/**",
+        "/home/nakata/ros/test_ws/src/TCP-IP-ROS-6AXis/dobot_v4_bringup/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/robots/dragon/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/fast_lio/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/robots/gimbalrotor/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/robots/hydrus/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/robots/hydrus_xi/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/kalman_filter/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/sensor_interface/leddar_one/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/sensor_interface/lepton_thermal_sensor/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/mocap_optitrack/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/aerial_robot_3rdparty/mujoco_ros_control/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/aerial_robot_3rdparty/osqp_slsqp/include/**",
+        "/home/nakata/ros/test_ws/src/test_repository/place_object/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/sensor_interface/px4flow_node/include/**",
+        "/home/nakata/ros/test_ws/src/TCP-IP-ROS-6AXis/rosdemo_v3/include/**",
+        "/home/nakata/ros/test_ws/src/TCP-IP-ROS-6AXis/rosdemo_v4/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/rosserial/rosserial_server/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/rosserial/rosserial_test/include/**",
+        "/home/nakata/ros/test_ws/src/TCP-IP-ROS-6AXis/rviz_dobot_control/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/sensor_interface/takasako_sps/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/ublox_gps/ublox_gps/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/ublox_gps/ublox_msgs/include/**",
+        "/home/nakata/ros/jsk_aerial_robot_ws/src/ublox_gps/ublox_serialization/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

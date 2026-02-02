@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
-  <arg name="lowerb_hue" default="0"/>
-  <arg name="upperb_hue" default="179"/>
-  <arg name="lowerb_luminance" default="0"/>
-  <arg name="upperb_luminance" default="50"/>
+  <arg name="lowerb_hue" default="110"/>
+  <arg name="upperb_hue" default="130"/>
+  <arg name="lowerb_luminance" default="50"/>
+  <arg name="upperb_luminance" default="255"/>
   <arg name="lowerb_saturation" default="0"/>
   <arg name="upperb_saturation" default="255"/>
   <arg name="endeffector_x" default="650"/>

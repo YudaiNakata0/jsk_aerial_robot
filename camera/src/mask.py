@@ -75,8 +75,8 @@ class MaskGenerator():
         mask_msg = self.bridge.cv2_to_imgmsg(self.mask, encoding="mono8")
         mask_cleaned_msg = self.bridge.cv2_to_imgmsg(self.mask_cleaned, encoding="mono8")
         filtered_mask_msg = self.bridge.cv2_to_imgmsg(self.filtered_mask, encoding="mono8")
-        # self.pub_mask.publish(mask_msg)
-        # self.pub_mask_cleaned.publish(mask_cleaned_msg)
+        self.pub_mask.publish(mask_msg)
+        self.pub_mask_cleaned.publish(mask_cleaned_msg)
         self.pub_filtered_mask.publish(filtered_mask_msg)
 
         

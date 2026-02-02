@@ -32,11 +32,11 @@ def main():
 
         if x == 0 and y == 0 and z == 0:
             return
-        elif z < 0.8:
+        elif z < 0.7:
             rospy.logwarn("too low z value")
         else:
             pub.publish(msg)
-            rospy.loginfo("Published PoseStamped: (%.2f, %.2f, %.2f) time=now+10s",
+            rospy.loginfo("Published PoseStamped: (%.3f, %.3f, %.3f) time=now+10s",
                           x, y, z)
 
 if __name__ == '__main__':

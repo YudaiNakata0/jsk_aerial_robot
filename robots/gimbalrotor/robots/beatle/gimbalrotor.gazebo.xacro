@@ -50,4 +50,20 @@
       </sensor>
     </gazebo>
   </xacro:if>
+
+  <!-- <gazebo reference="base_link"> -->
+  <!--   <visual> -->
+  <!--     <plugin name="trajectory_visual_plugin" -->
+  <!--             filename="libtrajectory_visual_plugin.so"/> -->
+  <!--   </visual> -->
+  <!-- </gazebo> -->
+
+  <!-- <gazebo reference="base_link"> -->
+  <!--   <visual> -->
+  <!--     <plugin name="trajectory_visualizer" filename="libtrajectory_visualizer.so"> -->
+  <!-- 	<pose_topic>/gimbalrotor/endeffector_pose</pose_topic> -->
+  <!--     </plugin> -->
+  <!--   </visual> -->
+  <!-- </gazebo> -->
+
 </robot>

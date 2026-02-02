@@ -3,7 +3,7 @@ import rospy
 from aerial_robot_msgs.msg import FlightNav, Pid, SimpleFlightNav
 from geometry_msgs.msg import Vector3, Pose, PoseStamped, WrenchStamped
 from nav_msgs.msg import Odometry
-from std_msgs.msg import Empty, Int8
+from std_msgs.msg import Empty, Int8, Bool
 
 class ImageBaseApproach():
     def __init__(self):
@@ -37,6 +37,8 @@ class ImageBaseApproach():
         self.pre_error_xi = 0.0
         self.pre_error_yi = 0.0
         self.pre_time = rospy.get_time()
+
+        self.target_pos_set_time = 0.0
         
     def setup_ros(self):
         self.sub_target_circle = rospy.Subscriber("/target/2D_position", Vector3, self.callback)
@@ -49,6 +51,7 @@ class ImageBaseApproach():
         self.pub_y_pid = rospy.Publisher("/y_pid_term", Pid, queue_size=1)
         self.pub_z_pid = rospy.Publisher("/z_pid_term", Pid, queue_size=1)
         self.pub_y_control_mode = rospy.Publisher("/gimbalrotor/teleop_command/y_ctrl_mode", Int8, queue_size=1)
+        self.pub_drawing_state = rospy.Publisher("/drawing_state", Bool, queue_size=1)
 
     # カメラ画像を受け取ったとき
     def callback(self, msg):
@@ -61,6 +64,11 @@ class ImageBaseApproach():
             if self.is_cog_goal_record:
                 print("cannot catch target; move to recorded goal pose")
                 self.publish_cog_target()
+            return
+
+        # 一定時間目標位置を保持
+        if rospy.get_time() - self.target_pos_set_time < 5.0:
+            print("stay previous target...")
             return
         
         self.target_xi = msg.x
@@ -76,7 +84,7 @@ class ImageBaseApproach():
         self.integral_error_xi += error_xi * du
         self.integral_error_yi += error_yi * du
         # print(f"int_y: {self.integral_error_xi}, int_z: {self.integral_error_yi}")
-
+        
         # 目標位置とエンドエフェクタ位置が近いとき
         if error_di2 < 1600:
             print("approached successfully")
@@ -94,6 +102,11 @@ class ImageBaseApproach():
                 msg = Empty()
                 self.pub_extrusion.publish(msg)
                 self.is_extruding = True
+            msg_drawing = Bool()
+            msg_drawing.data = True
+            self.pub_drawing_state.publish(msg_drawing)
+            # timer
+            self.target_pos_set_time = rospy.get_time()
 
         # 目標速度を計算　*カメラ画像内の軸と実際の軸は逆
         else:
