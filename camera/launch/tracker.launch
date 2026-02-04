@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="topic" default="/usb_cam/image_raw"/>
+  <arg name="thres" default="0.8"/>
+  <arg name="roi_flag" default="True"/>
+  <node pkg="camera" type="tracker.py" name="tracker_node" output="screen">
+    <param name="topic_name" value="$(arg topic)"/>
+    <param name="thers" value="$(arg thres)"/>
+    <param name="flag" value="$(arg roi_flag)"/>
+  </node>  
+</launch>

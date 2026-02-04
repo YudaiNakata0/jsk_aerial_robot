@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="sim" default="false"/>
+  <node pkg="camera" type="optical_flow_point.py" name="tracker_node" output="screen">
+    <param name="topic" value="/gimbalrotor/usb_cam/image_raw" if="$(arg sim)"/>
+  </node>
+
+  <node pkg="gimbalrotor" type="approach_target.py" name="navigation_node" output="screen"/>
+
+</launch>

@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<launch>
+  <group>
+    <include file="$(find gimbalrotor)/launch/wall_bringup.launch">
+      <arg name="airframe" value="beatle"/>
+      <arg name="real_machine" value="false"/>
+      <arg name="simulation" value="true"/>
+      <arg name="headless" value="false"/>
+      <arg name="launch_gazebo" value="true"/>
+      <arg name="estimate_mode" value="1"/>
+      <arg name="worldname" value="wall_hole"/>
+      <arg name="enable_camera" default="true"/>
+    </include>
+
+    <!-- gazebo plugin -->
+    <!-- <include file="$(find gimbalrotor)/launch/dummy_bringup.launch"> -->
+    <!--   <arg name="airframe" value="beatle"/> -->
+    <!--   <arg name="robot_id" value="_visual_base"/> -->
+    <!--   <arg name="real_machine" value="false"/> -->
+    <!--   <arg name="simulation" value="true"/> -->
+    <!--   <arg name="headless" value="false"/> -->
+    <!--   <arg name="launch_gazebo" value="false"/> -->
+    <!--   <arg name="estimate_mode" value="1"/> -->
+    <!--   <arg name="worldname" value="wall_hole"/> -->
+    <!--   <arg name="spawn_x" default="-1"/> -->
+    <!--   <arg name="spawn_y" default="0"/> -->
+    <!--   <arg name="spawn_z" default="0"/> -->
+    <!-- </include> -->
+
+    <!-- trajectory spawner -->
+    <node pkg="gimbalrotor" type="trajectory_visualizer.py" name="trajectory_spawner"/>
+
+    <!-- <include file="$(find gimbalrotor)/launch/wall_bringup.launch"> -->
+    <!--   <arg name="airframe" value="beatle"/> -->
+    <!--   <arg name="robot_id" value="_visual_base"/> -->
+    <!--   <arg name="real_machine" value="false"/> -->
+    <!--   <arg name="simulation" value="true"/> -->
+    <!--   <arg name="headless" value="false"/> -->
+    <!--   <arg name="launch_gazebo" value="false"/> -->
+    <!--   <arg name="estimate_mode" value="1"/> -->
+    <!--   <arg name="worldname" value="wall_hole"/> -->
+    <!--   <arg name="spawn_x" default="0"/> -->
+    <!--   <arg name="spawn_y" default="1"/> -->
+    <!-- </include> -->
+  </group>
+</launch>

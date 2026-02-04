@@ -38,6 +38,7 @@
 #include <aerial_robot_control/control/base/base.h>
 #include <aerial_robot_control/control/utils/pid.h>
 #include <aerial_robot_control/PIDConfig.h>
+#include <aerial_robot_estimation/sensor/imu.h>
 #include <aerial_robot_msgs/DynamicReconfigureLevels.h>
 #include <aerial_robot_msgs/PoseControlPid.h>
 #include <angles/angles.h>
@@ -67,12 +68,31 @@ namespace aerial_robot_control
     virtual bool update() override;
     virtual void reset() override;
 
+    const Eigen::VectorXd getTargetWrenchAccCog()
+    {
+      std::lock_guard<std::mutex> lock(wrench_mutex_);
+      return target_wrench_acc_cog_;
+    }
+    void setTargetWrenchAccCog(const Eigen::VectorXd target_wrench_acc_cog)
+    {
+      std::lock_guard<std::mutex> lock(wrench_mutex_);
+      target_wrench_acc_cog_ = target_wrench_acc_cog;
+    }
+
+
   protected:
     ros::Publisher pid_pub_;
-
+    ros::Publisher pid_body_pub_;
+    ros::Publisher estimate_external_wrench_pub_;
+    ros::Publisher feedforward_term_pub_;
+    ros::Publisher feedforward_term_body_pub_;
     std::vector<PID> pid_controllers_;
+    std::vector<PID> pid_controllers_body_;
     std::vector<boost::shared_ptr<PidControlDynamicConfig> > pid_reconf_servers_;
     aerial_robot_msgs::PoseControlPid pid_msg_;
+    aerial_robot_msgs::PoseControlPid pid_body_msg_;
+    geometry_msgs::Twist feedforward_term_msg_;
+    geometry_msgs::Twist feedforward_term_body_msg_;
 
     bool need_yaw_d_control_;
     bool start_rp_integration_;
@@ -87,12 +107,26 @@ namespace aerial_robot_control
     tf::Vector3 target_acc_, target_ang_acc_;
     tf::Vector3 rpy_, target_rpy_;
     tf::Vector3 omega_, target_omega_;
+    tf::Matrix3x3 body_orientation_;
+    Eigen::Vector3d w_base_bx_, w_base_by_, w_base_bz_;
+
+    std::mutex wrench_mutex_;
+    boost::thread wrench_estimate_thread_;
+    Eigen::VectorXd init_sum_momentum_;
+    Eigen::VectorXd est_external_wrench_;
+    Eigen::MatrixXd momentum_observer_matrix_;
+    Eigen::VectorXd integrate_term_;
+    double prev_est_wrench_timestamp_;
+    Eigen::VectorXd target_wrench_acc_cog_;
+
 
     virtual void controlCore();
     virtual void sendCmd();
 
 
     void cfgPidCallback(aerial_robot_control::PIDConfig &config, uint32_t level, std::vector<int> controller_indices);
+    void startWrenchEstimation();
+    virtual void externalWrenchEstimate();
   };
 
 };

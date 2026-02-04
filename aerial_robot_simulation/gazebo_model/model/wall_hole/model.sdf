@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="wall_hole">
+    <static>true</static>
+    <link name="wall_link">
+      <visual name="wall_visual">
+        <geometry>
+          <mesh>
+            <uri>file:///home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_simulation/gazebo_model/model/wall_hole/mesh/wall_hole.STL</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+          <diffuse>0.8 0.8 0.8 1</diffuse>
+        </material>
+      </visual>
+
+      <collision name="wall_collision">
+        <geometry>
+          <mesh>
+            <uri>file:///home/nakata/ros/jsk_aerial_robot_ws/src/jsk_aerial_robot/aerial_robot_simulation/gazebo_model/model/wall_hole/mesh/wall_hole.STL</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+        </geometry>
+      </collision>
+    </link>
+  </model>
+</sdf>

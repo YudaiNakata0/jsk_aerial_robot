@@ -6,10 +6,11 @@
   <arg name="robot_ns" />
   <arg name="rviz_init_pose" />
   <arg name="rviz_config" />
+  <arg name="enable_camera" />
 
   <group ns="$(arg robot_ns)">
     <!-- set robot_description to rosparameter server -->
-    <param name="robot_description" command="$(find xacro)/xacro '$(arg robot_model)' robot_name:=$(arg robot_ns)  $(arg model_options)" />
+    <param name="robot_description" command="$(find xacro)/xacro '$(arg robot_model)' robot_name:=$(arg robot_ns)  $(arg model_options) enable_camera:=$(arg enable_camera)" />
 
     <!-- joint state publisher if necessary -->
     <rosparam file ="$(arg rviz_init_pose)" command="load"/>

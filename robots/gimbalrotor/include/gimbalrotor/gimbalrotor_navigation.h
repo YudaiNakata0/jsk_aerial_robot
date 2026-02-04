@@ -6,6 +6,7 @@
 #include <geometry_msgs/Vector3Stamped.h>
 #include <geometry_msgs/QuaternionStamped.h>
 #include <spinal/DesireCoord.h>
+#include <aerial_robot_msgs/SimpleFlightNav.h>
 
 namespace aerial_robot_navigation
 {
@@ -26,12 +27,14 @@ public:
 private:
   ros::Publisher target_baselink_rpy_pub_;
   ros::Subscriber final_target_baselink_rot_sub_, final_target_baselink_rpy_sub_;
+  ros::Subscriber simple_navi_sub_;
 
   void baselinkRotationProcess();
   void rosParamInit() override;
   void targetBaselinkRotCallback(const geometry_msgs::QuaternionStampedConstPtr& msg);
   void targetBaselinkRPYCallback(const geometry_msgs::Vector3StampedConstPtr& msg);
   void naviCallback(const aerial_robot_msgs::FlightNavConstPtr& msg) override;
+  void simpleNaviCallback(const aerial_robot_msgs::SimpleFlightNav::ConstPtr& msg);
 
   void reset() override;
 
