@@ -279,6 +279,7 @@ int main(void)
   bool servo_connect = servo_.init(&huart2, &nh_, NULL);
 
   bool nerve_connect = Spine::init(&hfdcan1, &nh_, &estimator_, &controller_, LED1_GPIO_Port, LED1_Pin);
+
   if(nerve_connect) Spine::useRTOS(&canMsgMailHandle); // use RTOS for CAN in spianl
 
   /* USER CODE END 2 */
