@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <launch>
+  <arg name="worldname" default="wall_hole"/>
   <group>
     <include file="$(find gimbalrotor)/launch/wall_bringup.launch">
       <arg name="airframe" value="beatle"/>
@@ -8,7 +9,7 @@
       <arg name="headless" value="false"/>
       <arg name="launch_gazebo" value="true"/>
       <arg name="estimate_mode" value="1"/>
-      <arg name="worldname" value="wall_hole"/>
+      <arg name="worldname" value="$(arg worldname)"/>
       <arg name="enable_camera" default="true"/>
     </include>
 
