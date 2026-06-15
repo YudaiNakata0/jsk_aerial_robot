@@ -42,6 +42,7 @@ private:
   ros::Subscriber send_feedforward_switch_flag_sub_;
   ros::Subscriber xyz_wrench_control_flag_sub_;
   ros::Subscriber body_x_vel_mode_sub_;
+  ros::Subscriber desire_pos_for_impedance_sub_;
   ros::Time time_hover_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
@@ -68,6 +69,7 @@ private:
   Eigen::VectorXd offset_p_term_bx_;
   Eigen::VectorXd offset_p_term_by_;
   Eigen::VectorXd offset_p_term_bz_;
+  Eigen::VectorXd desire_pos_for_impedance_;
 
   double candidate_yaw_term_;
   int gimbal_dof_;
@@ -91,6 +93,8 @@ private:
   double target_acc_gain_;
   double recording_start_time_;
   double recording_end_time_;
+  double K_imp_;
+  double limit_F_imp_;
 
   void rosParamInit();
   bool update() override;
@@ -108,5 +112,6 @@ private:
   void FlightStateCallback(std_msgs::UInt8 msg);
   void XYZWrenchControlFlagCallBack(std_msgs::Bool msg);
   void BodyXVelModeCallBack(std_msgs::Bool msg);
+  void DesirePosImpedanceCallback(geometry_msgs::Vector3 msg);
 };
 };  // namespace aerial_robot_control

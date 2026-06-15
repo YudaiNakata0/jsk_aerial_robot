@@ -42,6 +42,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   filtered_est_external_wrench_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("filtered_est_external_wrench",1);
   desire_wrench_sub_ = nh_.subscribe("desire_wrench", 1, &GimbalrotorController::DesireWrenchCallback, this);
   // body_x_vel_mode_sub_ = nh_.subscribe("body_x_vel_mode", 1, &GimbalrotorController::BodyXVelModeCallBack, this);
+  desire_pos_for_impedance_sub_ = nh_.subscribe("desire_pos_for_impedance", 1, &GimbalrotorController::DesirePosImpedanceCallback, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
   desire_wrench_ = Eigen::VectorXd::Zero(6);
   filtered_ftsensor_wrench_ = Eigen::VectorXd::Zero(6);
@@ -60,6 +61,7 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   offset_p_term_bx_ = Eigen::VectorXd::Zero(3);
   offset_p_term_by_ = Eigen::VectorXd::Zero(3);
   offset_p_term_bz_ = Eigen::VectorXd::Zero(3);
+  desire_pos_for_impedance_ = Eigen::VectorXd::Zero(3);
   
   flight_state_ = 0;
   target_acc_gain_ = 1.0;
@@ -95,6 +97,10 @@ void GimbalrotorController::rosParamInit()
 
   x_p_gain_ = pid_controllers_.at(X).getPGain();
   y_p_gain_ = pid_controllers_.at(Y).getPGain();
+
+  /* impedance */
+  getParam<double>(control_nh, "impedance/spring_gain", K_imp_, 1.0);
+  getParam<double>(control_nh, "impedance/force_limit", limit_F_imp_, 5.0);
 }
 
 bool GimbalrotorController::update()
@@ -529,6 +535,18 @@ void GimbalrotorController::ExtWrenchControl(){
   force_error = desire_wrench_.head(3); // + cog_rot.inverse() * filtered_est_external_wrench.head(3);
   torque_error = desire_wrench_.tail(3); //+ cog_rot.inverse() * filtered_est_external_wrench.tail(3);
 
+  /* impedance */
+  if(navigator_->getBodyXControlMode() == 1){
+    double pos_bx_des;
+    double pos_bx_cur;
+    double F_imp_bx;
+    pos_bx_des = desire_pos_for_impedance_[0];
+    pos_bx_cur = (body_orientation_*pos_).x();
+    F_imp_bx = K_imp_ * (pos_bx_des - pos_bx_cur);
+    F_imp_bx = clamp(F_imp_bx, -limit_F_imp_, limit_F_imp_);
+    force_error(0) += F_imp_bx;
+  }
+
   Eigen::Vector3d target_acc = target_acc_gain_ * mass_inv * force_error;
   Eigen::Vector3d target_ang_acc = target_acc_gain_ * inertia_inv * torque_error;
   Eigen::Vector3d feedforward_acc = cog_rot * (target_acc + feedforward_sum_.head(3));
@@ -700,6 +718,11 @@ void GimbalrotorController::XYZWrenchControlFlagCallBack(std_msgs::Bool msg)
 void GimbalrotorController::BodyXVelModeCallBack(std_msgs::Bool msg)
 {
   if_body_x_vel_mode_ = msg.data;
+}
+
+void GimbalrotorController::DesirePosImpedanceCallback(geometry_msgs::Vector3 msg)
+{
+  desire_pos_for_impedance_ << msg.x, msg.y, msg.z;
 }
 
 }  // namespace aerial_robot_control

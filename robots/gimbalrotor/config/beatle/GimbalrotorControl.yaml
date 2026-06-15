@@ -53,3 +53,7 @@ controller:
   wrench_record:
     start_time: 3.0
     recording_time: 5.0
+
+  impedance:
+    spring_gain: 1.0
+    force_limit: 5.0
