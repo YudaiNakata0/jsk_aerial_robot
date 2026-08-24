@@ -42,24 +42,35 @@ class OpticalFlowCalculator():
         mag_threshold = 1.0
         mask = mag > mag_threshold
 
+        avg_fx = 0.0
+        avg_fy = 0.0
         if np.sum(mask) > 50:
             avg_fx = np.mean(fx[mask])
             avg_fy = np.mean(fy[mask])
             avg_speed = np.sqrt(avg_fx**2 + avg_fy**2)
             avg_angle = np.arctan2(avg_fy, avg_fx)
-            
-            # 表示用  
+
+            # 表示用
             print("平均速度ベクトル: (%.2f, %.2f)" % (avg_fx, avg_fy))
             print("平均速度の大きさ: %.2f" % avg_speed)
             print("平均方向 [rad]: %.2f" % avg_angle)
             print("平均方向 [deg]: %.2f" % (avg_angle * 180 / np.pi))
             print("----------------------------------")
-        
+
         hsv = np.zeros_like(frame)
         hsv[..., 1] = 255
         hsv[..., 0] = ang * 180 / np.pi / 2
         hsv[..., 2] = cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX)
         bgr = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+
+        # 画面全体の平均的な動きを中心からの矢印として可視化
+        h, w = gray.shape
+        center = (w // 2, h // 2)
+        arrow_scale = 10
+        end_point = (int(center[0] + avg_fx * arrow_scale),
+                     int(center[1] + avg_fy * arrow_scale))
+        cv2.arrowedLine(bgr, center, end_point, (0, 0, 255), 3, tipLength=0.3)
+
         if self.tracking_point:
             self.tracking_point[0] += avg_fx
             self.tracking_point[1] += avg_fy
