@@ -10,7 +10,8 @@
   <arg name="sim_estimate_mode"  default= "2" />
   <arg name="headless" default="True" />
   <arg name="worldname" default="wall" />
-  <arg name="worldtype" default="$(find aerial_robot_simulation)/gazebo_model/world/$(arg worldname).world" />
+  <!-- <arg name="worldtype" default="$(find aerial_robot_simulation)/gazebo_model/world/$(arg worldname).world" /> -->
+  <arg name="worldtype" default="$(find gazebo_models)/worlds/$(arg worldname).world" />
   <arg name="launch_gazebo" default="True" />
   <arg name="direct_model" default="False" />
   <arg name="direct_model_name" />
