@@ -33,6 +33,15 @@
 ## 7. テンプレートマッチング/追跡
 - **tracker.py**: `/usb_cam/image_raw`（既定）を購読。マウスクリックまたは `selectROI`、あるいは既存のROIファイル読み込みでテンプレート（ROI画像）を設定し、`matchTemplate` によるテンプレートマッチングでフレーム内の対象を追跡。スコアが閾値超なら結果を `/target/2D_position` に配信し、次フレームのROIも自動更新（トラッキング継続）。
 
+## 8. 壁全体との位置合わせ
+- **wall_alignment_tracker.py**: `tracker.py`が1点のROIをテンプレートとして追跡するのに対し、こちらは壁全体の見た目を基準画像として使い、現在のカメラ画像が基準（望ましい状態）からどれだけズレているかを推定する。`/usb_cam/image_raw`（既定）を購読し、基準画像に対して`cv2.findTransformECC`（`MOTION_EUCLIDEAN`、並進＋回転）で位置合わせを行う。壁の模様が固有（繰り返しでない）かつズレが小さいことを前提に、前フレームの推定結果を初期値としたウォームスタートでリアルタイム性を確保している。
+  - 基準画像は起動時にファイル（既定 `src/image/wall_reference.png`、`~ref_path`パラメータで変更可）から読み込む。ファイルが無い場合や再基準化したい場合は、表示ウィンドウ上で `s` キーを押すと現在のフレームを新しい基準として保存・反映する。
+  - ズレ量（横・縦・回転）を `/wall_alignment/deviation`（`geometry_msgs/Pose2D`）に配信。ECCの相関係数が閾値未満（`~min_correlation`、既定0.6）の場合は位置合わせ失敗とみなし `/wall_alignment/valid`（`std_msgs/Bool`）に`false`を配信する。
+  - デバッグ用画像を `/processed_image/wall_alignment` に配信。画面中心からのズレ方向・大きさを矢印で表示し、dx/dy/dtheta・相関係数の数値もオーバーレイ表示する。
+  - 主なパラメータ: `~compressed`（`true`にすると`sensor_msgs/CompressedImage`型で購読、既定`false`＝`sensor_msgs/Image`型）, `~topic`（購読トピック、未指定時は`~compressed`の値に応じて`/usb_cam/image_raw`または`/usb_cam/image_raw/compressed`を自動選択）, `~ref_path`（基準画像パス）, `~resize_width`/`~resize_height`（ECC計算時の縮小解像度、既定320x240）, `~max_iterations`/`~epsilon`（ECCの収束条件）, `~min_correlation`（有効と判定する最小相関係数）。
+  - 実行例: `rosrun camera wall_alignment_tracker.py _compressed:=true`（`/usb_cam/image_raw/compressed`を購読）
+  - 将来、壁との距離（スケール変化）まで検出したくなった場合は`MOTION_EUCLIDEAN`を`MOTION_AFFINE`に切り替えることで対応可能。
+
 ---
 
 ## 共通する設計パターン
