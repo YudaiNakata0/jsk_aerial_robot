@@ -42,6 +42,16 @@
   - 実行例: `rosrun camera wall_alignment_tracker.py _compressed:=true`（`/usb_cam/image_raw/compressed`を購読）
   - 将来、壁との距離（スケール変化）まで検出したくなった場合は`MOTION_EUCLIDEAN`を`MOTION_AFFINE`に切り替えることで対応可能。
 
+## 9. 黒いエリア（対象ボード）の下の縁検出
+- **board_edge_detection.py**: 壁面の黒いエリア（中心に円形の穴があるボード）の外周のうち、下側の縁だけを購読中の生画像から抽出する。`/usb_cam/image_raw`（既定、`~compressed:=true`で`/usb_cam/image_raw/compressed`）を購読する。
+  - **探索範囲の限定**: 下の縁は画像の下側にしか現れない前提で、`~search_top_ratio`（既定0.5＝下半分）より下の行だけを処理対象にする。これにより上半分に映り込むロボットや背景を誤って拾う可能性を減らし、計算量も削減する。
+  - **二値化としきい値**: グレースケール化＋メディアンブラー後、黒いエリアだけが暗いグレースケール値になる前提で二値化する。既定では`~auto_threshold`（既定true）によりOtsuの二値化でフレームごとに黒/非黒の境界となるしきい値を自動計算し、`~min_black_thresh`〜`~max_black_thresh`（既定20〜100）の範囲にクリップして使う。Otsuは現在のフレーム自身の明暗ヒストグラムから谷を探すため、現場が暗い（全体の明るさが下がる）場合でもしきい値がその都度追従し、`~black_thresh`を固定値で運用するより頑健。`~auto_threshold:=false`にすると固定しきい値`~black_thresh`（既定80）を使う従来動作に戻せる。実際に使われたしきい値はデバッグ画像左上に`black_thresh=...`として表示される。
+    - **調整の仕方**: `/processed_image/board_edge`と`/processed_image/board_mask`をrqt_image_view等で見ながら、(1) 黒いエリアが欠けて検出できない→`~max_black_thresh`を上げる、(2) 背景やロボットの映り込みまで黒く誤検出される→`~max_black_thresh`を下げる、(3) 暗すぎる現場でボード自体もほぼ潰れて全く二値化できない→`~min_black_thresh`を下げるか、カメラ側の露光・ゲインを上げることを検討する。特定の照明環境だけで運用するなら`~auto_threshold:=false`にして`~black_thresh`を直接チューニングしてもよい。
+  - モルフォロジー処理（オープン→クローズ）でノイズを除去後、`findContours`（`RETR_EXTERNAL`）で外周のみを取り出す（中心の円形の穴は中間〜明るいグレーのため無視される）。面積が`~min_area`（既定2000）未満の輪郭は誤検出とみなして無効判定。
+  - 検出した輪郭は`~approx_epsilon_ratio`（既定0.01）で`approxPolyDP`により多角形近似し、各辺について「水平からのズレが`~max_angle_from_horizontal_deg`（既定15度）以内」かつ「長さが`~expected_length`±`~length_tolerance`（既定300px±150px）の範囲内」の2条件を満たす辺だけを候補とし、その中で画像内で最もy座標が大きい（＝最も下側にある）辺を下の縁として選ぶ。ロボットの映り込みで上辺に切れ込みができて水平な短辺が余分に生じても、長さ条件で候補から外れるため下の縁の検出には影響しない。
+  - 検出した下の縁の両端点を`/target/board_bottom_edge`（`geometry_msgs/PolygonStamped`、2点）に配信。二値マスクを`/processed_image/board_mask`（mono8、探索範囲外は黒で埋める）、輪郭全体と下の縁を強調描画したデバッグ画像（探索範囲の境界線も表示）を`/processed_image/board_edge`（bgr8）に配信。有効/無効は`/target/board_bottom_edge_valid`（`std_msgs/Bool`）で通知する。
+  - 円形の穴の検出（`circle_detection.py`等）は別スクリプトでの後段処理を想定しており、本スクリプトは黒いエリアの下の縁取得のみを担当する。
+
 ---
 
 ## 共通する設計パターン
