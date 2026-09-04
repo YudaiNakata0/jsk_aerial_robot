@@ -126,7 +126,7 @@ install(PROGRAMS
   src/optical_flow.py
   src/optical_flow_feature.py
   src/feature_track.py
-  src/wall_alignment_tracker.py
+  src/board_exp/wall_alignment_tracker.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
