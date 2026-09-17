@@ -42,6 +42,16 @@
   - 実行例: `rosrun camera wall_alignment_tracker.py _compressed:=true`（`/usb_cam/image_raw/compressed`を購読）
   - 将来、壁との距離（スケール変化）まで検出したくなった場合は`MOTION_EUCLIDEAN`を`MOTION_AFFINE`に切り替えることで対応可能。
 
+## 8b. 特徴点＋オプティカルフローによるカメラ動き推定
+- **board_exp/camera_motion_tracker.py**: `wall_alignment_tracker.py`と同じく「基準フレームからカメラがどれだけ動いたか」を推定するが、ECCによる画像全体の位置合わせの代わりに特徴点検出（`goodFeaturesToTrack`）とLucas-Kanade法のオプティカルフローを使う。物体そのものの動きではなく、カメラ自身の動き（並進・回転）だけを見たい用途向け。
+  - 起動時、または表示ウィンドウ上で`~reset_key`（既定`s`）を押したときの現在のフレームを基準として特徴点を検出する。基準（壁面の模様）は画面下側に多く、上側にはロボット自身やその先の構造物が映り込みやすいため、`board_edge_detection.py`と同様に`~search_top_ratio`（既定0.5＝下半分）より下の行だけを特徴点検出の対象にする。以後の各フレームで、直前フレームからの`calcOpticalFlowPyrLK`により基準点を連続的に（インデックス対応を保ったまま）追跡し、「基準時の点座標」と「現在の追跡点座標」の対応から`cv2.estimateAffinePartial2D`（RANSAC）で相似変換を推定する。毎フレーム基準と直接比較するため、フレーム間の動きを逐次積算する方式と違いドリフトしない。
+  - 追跡点数が`~min_tracked_points`（既定30）を下回ったら、現フレームを新しい基準として自動的に取り直す（rebase）。その際、直前まで求めていた「元の基準からの変換」を蓄積行列として保持し、以後もそれと合成することで元の基準からの累積ズレを途切れなく配信し続ける。
+  - ズレ量（横・縦・回転）を`/camera_motion/deviation`（`geometry_msgs/Pose2D`）に配信。RANSACのインライア数が`~min_inliers`（既定15）未満の場合は無効とみなし`/camera_motion/valid`（`std_msgs/Bool`）に`false`を配信する。
+  - **任意の点の推定移動先の可視化**: 表示ウィンドウ上をクリックすると、その位置を現在の累積変換の逆行列で「元の基準フレーム上の座標」に変換して記憶する。以後は毎フレーム、その点を最新の累積変換で現在のフレームへ投影し直してマゼンタの十字＋円で描画するため、指定した点がカメラの動きの推定に従って画像内でどこへ移動したと推定されるかを目視で確認できる。`~clear_key`（既定`c`）で記憶した点をすべてクリアできる（`~reset_key`で基準を取り直した際も、古い基準に紐づくため自動的にクリアされる）。
+  - デバッグ用画像を`/processed_image/camera_motion`に配信。特徴点探索範囲の境界線、追跡中の特徴点、マークした点の推定位置、画面中心からのズレ方向・大きさの矢印、dx/dy/dtheta・追跡点数/インライア数の数値をオーバーレイ表示する。
+  - 主なパラメータ: `~compressed`/`~topic`（他スクリプトと同様）, `~max_corners`/`~quality_level`/`~min_distance`/`~block_size`（基準点検出）, `~search_top_ratio`（特徴点探索範囲、既定0.5＝下半分）, `~lk_win_size`/`~lk_max_level`（LK法）, `~min_tracked_points`（自動rebaseの閾値）, `~min_points_for_estimate`（RANSAC推定を試みる最小点数、既定6）, `~ransac_reproj_thresh`, `~min_inliers`（有効と判定する最小インライア数）, `~reset_key`（既定`s`、手動で基準を取り直し累積ズレとマーク点をリセット）, `~clear_key`（既定`c`、マーク点のみクリア）。
+  - 実行例: `rosrun camera camera_motion_tracker.py _compressed:=true`（`/usb_cam/image_raw/compressed`を購読）
+
 ## 9. 黒いエリア（対象ボード）の下の縁検出
 - **board_edge_detection.py**: 壁面の黒いエリア（中心に円形の穴があるボード）の外周のうち、下側の縁だけを購読中の生画像から抽出する。`/usb_cam/image_raw`（既定、`~compressed:=true`で`/usb_cam/image_raw/compressed`）を購読する。
   - **探索範囲の限定**: 下の縁は画像の下側にしか現れない前提で、`~search_top_ratio`（既定0.5＝下半分）より下の行だけを処理対象にする。これにより上半分に映り込むロボットや背景を誤って拾う可能性を減らし、計算量も削減する。
@@ -51,6 +61,15 @@
   - 検出した輪郭は`~approx_epsilon_ratio`（既定0.01）で`approxPolyDP`により多角形近似し、各辺について「水平からのズレが`~max_angle_from_horizontal_deg`（既定15度）以内」かつ「長さが`~expected_length`±`~length_tolerance`（既定300px±150px）の範囲内」の2条件を満たす辺だけを候補とし、その中で画像内で最もy座標が大きい（＝最も下側にある）辺を下の縁として選ぶ。ロボットの映り込みで上辺に切れ込みができて水平な短辺が余分に生じても、長さ条件で候補から外れるため下の縁の検出には影響しない。
   - 検出した下の縁の両端点を`/target/board_bottom_edge`（`geometry_msgs/PolygonStamped`、2点）に配信。二値マスクを`/processed_image/board_mask`（mono8、探索範囲外は黒で埋める）、輪郭全体と下の縁を強調描画したデバッグ画像（探索範囲の境界線も表示）を`/processed_image/board_edge`（bgr8）に配信。有効/無効は`/target/board_bottom_edge_valid`（`std_msgs/Bool`）で通知する。
   - 円形の穴の検出（`circle_detection.py`等）は別スクリプトでの後段処理を想定しており、本スクリプトは黒いエリアの下の縁取得のみを担当する。
+
+## 10. 穴の下の壁面を目印にしたテンプレート追跡
+- **board_exp/hole_target_tracker.py**: 中心に円形の穴があるボードについて、ユーザーが指定した穴の位置を基準に、その移動をテンプレートマッチングで追い続ける。`/usb_cam/image_raw`（既定、`~compressed:=true`で`/usb_cam/image_raw/compressed`）を購読し、`capture`→`select`→`tracking`の3状態を遷移する。
+  - **capture**: ライブ映像を表示し、`~capture_key`（既定`s`）でその瞬間のフレームを1枚だけサンプル画像として固定する。
+  - **select**: 固定したサンプル画像上でのクリックを待つ（`cv2.setMouseCallback`で登録）。クリック座標を穴の中心とみなす。
+  - **テンプレートの切り出し**: 穴そのものや穴の上側（ロボットが映り込みやすい）は避け、穴から`~patch_top_margin`（既定40px）だけ下側を、壁のパターンも入るよう横に広め（`~patch_width`×`~patch_height`、既定240×120px）に切り出してテンプレートとする。穴の位置はテンプレート左上からの相対オフセットとして保持し、以後の追跡結果（テンプレート位置）から穴の座標を逆算する。
+  - **tracking**: グレースケール1chで`cv2.matchTemplate`（`TM_CCOEFF_NORMED`）により追跡する。計算量を抑えるため、前回位置周辺（`~search_margin`、既定60px）だけを探索する窓探索を基本とし、`~lost_frames_before_full_search`（既定5フレーム）連続で見失った場合のみ全画面探索にフォールバックする。この全画面探索も、`~use_coarse_reacquire`（既定true）なら`~coarse_scale`（既定0.5）に縮小した画像で大まかな位置を求めてから原寸で再探索する粗密探索にして重くなりすぎないようにしている。マッチスコアが`~match_thresh`（既定0.6）未満なら見失ったと判定する。
+  - 穴の現在座標を`/target/2D_position`（`geometry_msgs/Vector3`、z=マッチスコア）に、初期クリック位置からの移動量を`/target/hole_deviation`（`geometry_msgs/Pose2D`、`wall_alignment_tracker.py`の`/wall_alignment/deviation`と同形式）に配信。有効/無効は`/target/hole_tracking_valid`（`std_msgs/Bool`）で通知する。デバッグ用画像（テンプレート枠・穴の推定位置・スコア）を`/processed_image/hole_tracking`に配信。
+  - `~reset_key`（既定`r`）でいつでも`capture`状態に戻り、サンプル画像の取り直し・穴の再指定ができる。
 
 ---
 
