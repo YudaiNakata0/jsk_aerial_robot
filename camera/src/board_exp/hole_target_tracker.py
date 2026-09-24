@@ -16,6 +16,9 @@ class HoleTargetTracker():
     3. 穴そのものではなく、穴より下側の壁面（ロボットの映り込みが無く、
        壁のパターンも含められる範囲）を広めにテンプレートとして切り出し、
        以後のフレームでその移動を追跡する。
+    4. トラッキング中に基準位置設定キー ('c') を押してからライブ映像上を
+       クリックすると、そのクリック位置が偏差(/target/hole_deviation)算出の
+       基準位置として更新される。穴指定時と異なり画面を止める必要はない。
     """
 
     STATE_CAPTURE = "capture"
@@ -24,7 +27,7 @@ class HoleTargetTracker():
 
     def __init__(self, topic, compressed, patch_width, patch_height, patch_top_margin,
                  match_thresh, search_margin, use_coarse_reacquire, coarse_scale,
-                 lost_frames_before_full_search, capture_key, reset_key):
+                 lost_frames_before_full_search, capture_key, reset_key, set_reference_key):
         self.bridge = CvBridge()
         self.topic = topic
         self.compressed = compressed
@@ -38,6 +41,7 @@ class HoleTargetTracker():
         self.lost_frames_before_full_search = lost_frames_before_full_search
         self.capture_key = ord(capture_key)
         self.reset_key = ord(reset_key)
+        self.set_reference_key = ord(set_reference_key)
 
         self.window_name = "Hole Target Tracker"
         self.window_ready = False
@@ -50,9 +54,10 @@ class HoleTargetTracker():
         self.click_point = None
         self.template_gray = None
         self.hole_offset = None
-        self.initial_hole_center = None
+        self.reference_point = None
         self.last_top_left = None
         self.lost_count = 0
+        self.awaiting_reference_click = False
 
     def setup_ros(self):
         if self.compressed:
@@ -71,8 +76,17 @@ class HoleTargetTracker():
         return self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
 
     def mouse_callback(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN and self.state == self.STATE_SELECT:
+        if event != cv2.EVENT_LBUTTONDOWN:
+            return
+        if self.state == self.STATE_SELECT:
             self.click_point = (x, y)
+        elif self.state == self.STATE_TRACKING and self.awaiting_reference_click:
+            # ライブ映像上のクリック位置をそのまま新しい基準位置とする。
+            # 穴指定時と違い、テンプレートマッチングは行わないため画面を
+            # 止める必要はない。
+            self.reference_point = (x, y)
+            self.awaiting_reference_click = False
+            rospy.loginfo("Reference position updated to (%d, %d)." % (x, y))
 
     # ---------------- capture / select ----------------
 
@@ -124,7 +138,7 @@ class HoleTargetTracker():
         # 穴の位置をテンプレート左上からの相対オフセットとして保持し、
         # 追跡結果（テンプレートの位置）から穴の位置を逆算できるようにする。
         self.hole_offset = (cx - px0, cy - py0)
-        self.initial_hole_center = (cx, cy)
+        self.reference_point = (cx, cy)
         self.last_top_left = (px0, py0)
         self.lost_count = 0
         return True
@@ -185,8 +199,8 @@ class HoleTargetTracker():
             self.lost_count = 0
             hole_x = top_left[0] + self.hole_offset[0]
             hole_y = top_left[1] + self.hole_offset[1]
-            dx = hole_x - self.initial_hole_center[0]
-            dy = hole_y - self.initial_hole_center[1]
+            dx = hole_x - self.reference_point[0]
+            dy = hole_y - self.reference_point[1]
             self.publish_position(hole_x, hole_y, score)
             self.publish_deviation(dx, dy)
         else:
@@ -203,6 +217,9 @@ class HoleTargetTracker():
         if key == self.reset_key:
             rospy.loginfo("Reset requested. Capture a new sample image.")
             self.reset_state()
+        elif key == self.set_reference_key:
+            self.awaiting_reference_click = True
+            rospy.loginfo("Click on the live image to set the new reference position.")
 
     # ---------------- publish / draw ----------------
 
@@ -223,8 +240,18 @@ class HoleTargetTracker():
                 hole_x = top_left[0] + self.hole_offset[0]
                 hole_y = top_left[1] + self.hole_offset[1]
                 cv2.circle(image, (int(hole_x), int(hole_y)), 6, (0, 0, 255), -1)
+        if self.reference_point is not None:
+            rx, ry = self.reference_point
+            cv2.drawMarker(image, (int(rx), int(ry)), (255, 0, 0),
+                            markerType=cv2.MARKER_CROSS, markerSize=16, thickness=2)
         cv2.putText(image, "score=%.3f" % score, (10, 25),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+        if self.awaiting_reference_click:
+            cv2.putText(image, "Click to set reference position", (10, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+        else:
+            cv2.putText(image, "Press '%c' to set reference position" % self.set_reference_key, (10, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
         cv2.imshow(self.window_name, image)
 
     def publish_debug_image(self, image, header):
@@ -261,8 +288,8 @@ if __name__ == "__main__":
     compressed = rospy.get_param("~compressed", False)
     default_topic = "/usb_cam/image_raw/compressed" if compressed else "/usb_cam/image_raw"
     topic = rospy.get_param("~topic", default_topic)
-    patch_width = rospy.get_param("~patch_width", 240)
-    patch_height = rospy.get_param("~patch_height", 120)
+    patch_width = rospy.get_param("~patch_width", 480)
+    patch_height = rospy.get_param("~patch_height", 300)
     patch_top_margin = rospy.get_param("~patch_top_margin", 40)
     match_thresh = rospy.get_param("~match_thresh", 0.6)
     search_margin = rospy.get_param("~search_margin", 60)
@@ -271,10 +298,12 @@ if __name__ == "__main__":
     lost_frames_before_full_search = rospy.get_param("~lost_frames_before_full_search", 5)
     capture_key = rospy.get_param("~capture_key", "s")
     reset_key = rospy.get_param("~reset_key", "r")
+    set_reference_key = rospy.get_param("~set_reference_key", "c")
 
     tracker = HoleTargetTracker(topic, compressed, patch_width, patch_height, patch_top_margin,
                                  match_thresh, search_margin, use_coarse_reacquire, coarse_scale,
-                                 lost_frames_before_full_search, capture_key, reset_key)
+                                 lost_frames_before_full_search, capture_key, reset_key,
+                                 set_reference_key)
     try:
         rospy.spin()
     except KeyboardInterrupt:
