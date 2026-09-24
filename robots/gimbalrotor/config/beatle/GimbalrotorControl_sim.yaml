@@ -55,3 +55,4 @@ controller:
   impedance:
     spring_gain: 0.1
     force_limit: 5.0
+    damping_gain: 0.0 # [N/(m/s)] additional to PID D term

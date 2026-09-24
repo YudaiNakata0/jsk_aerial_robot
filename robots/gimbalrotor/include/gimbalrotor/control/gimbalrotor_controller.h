@@ -43,6 +43,7 @@ private:
   ros::Subscriber xyz_wrench_control_flag_sub_;
   ros::Subscriber body_x_vel_mode_sub_;
   ros::Subscriber desire_pos_for_impedance_sub_;
+  ros::Publisher impedance_force_pub_;               // for impedance (debug)
   ros::Time time_hover_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
@@ -95,6 +96,12 @@ private:
   double recording_end_time_;
   double K_imp_;
   double limit_F_imp_;
+  // impedance: damping gain [N/(m/s)] added on top of the PID D term along body x
+  double D_imp_;
+  // impedance: true if desire_pos_for_impedance was received while not in impedance mode
+  bool desire_pos_for_impedance_received_;
+  // impedance: previous body x control mode, to detect the switch into impedance mode
+  uint8_t prev_body_x_control_mode_;
 
   void rosParamInit();
   bool update() override;

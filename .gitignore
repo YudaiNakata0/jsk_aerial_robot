@@ -111,3 +111,9 @@ tags
 # mujoco
 MUJOCO_LOG.txt
 robots/**/mujoco
+
+# claude
+CLAUDE.md
+
+# rosbag
+bags/*
