@@ -49,6 +49,7 @@ namespace aerial_robot_control
     target_acc_(0,0,0),
     target_omega_(0,0,0),
     w_base_bx_(0,0,0), w_base_by_(0,0,0), w_base_bz_(0,0,0),
+    use_fixed_body_x_dir_(false), fixed_body_x_dir_(1,0,0),
     start_rp_integration_(false)
   {
     pid_msg_.x.total.resize(1);
@@ -315,6 +316,9 @@ namespace aerial_robot_control
 
     // base vectors (unit vectors) of body frame (in world frame)
     tf::Vector3 w_base_bx_tf = rot_to_body * tf::Vector3(1, 0, 0);
+    // use fixed body x direction if requested by derived class (not affected by attitude fluctuation)
+    // note: by and bz are still calculated from the current orientation
+    if(use_fixed_body_x_dir_) w_base_bx_tf = fixed_body_x_dir_;
     tf::Vector3 w_base_by_tf = rot_to_body * tf::Vector3(0, 1, 0);
     tf::Vector3 w_base_bz_tf = rot_to_body * tf::Vector3(0, 0, 1);
     w_base_bx_ << w_base_bx_tf.x(), w_base_bx_tf.y(), w_base_bx_tf.z();

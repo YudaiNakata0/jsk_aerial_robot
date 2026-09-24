@@ -45,6 +45,10 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   desire_pos_for_impedance_sub_ = nh_.subscribe("desire_pos_for_impedance", 1, &GimbalrotorController::DesirePosImpedanceCallback, this);
   // impedance: debug output of impedance force (world frame, [N])
   impedance_force_pub_ = nh_.advertise<geometry_msgs::Vector3Stamped>("debug/impedance_force", 1);
+  // impedance: direction of impedance (e.g. surface normal, world frame)
+  impedance_direction_sub_ = nh_.subscribe("impedance_direction", 1, &GimbalrotorController::ImpedanceDirectionCallback, this);
+  // impedance: on/off of impedance control
+  impedance_flag_sub_ = nh_.subscribe("impedance_flag", 1, &GimbalrotorController::ImpedanceFlagCallback, this);
   estimated_external_wrench_in_cog_ = Eigen::VectorXd::Zero(6);
   desire_wrench_ = Eigen::VectorXd::Zero(6);
   filtered_ftsensor_wrench_ = Eigen::VectorXd::Zero(6);
@@ -65,7 +69,11 @@ void GimbalrotorController::initialize(ros::NodeHandle nh, ros::NodeHandle nhp,
   offset_p_term_bz_ = Eigen::VectorXd::Zero(3);
   desire_pos_for_impedance_ = Eigen::VectorXd::Zero(3);
   desire_pos_for_impedance_received_ = false;
-  prev_body_x_control_mode_ = 0;
+  impedance_flag_ = false;
+  prev_impedance_flag_ = false;
+  prev_impedance_active_ = false;
+  impedance_dir_ = Eigen::Vector3d::UnitX();
+  impedance_dir_received_ = false;
   
   flight_state_ = 0;
   target_acc_gain_ = 1.0;
@@ -76,6 +84,12 @@ void GimbalrotorController::reset()
   PoseLinearController::reset();
 
   setAttitudeGains();
+
+  // impedance: turn off impedance control (e.g. after landing)
+  impedance_flag_ = false;
+  prev_impedance_flag_ = false;
+  prev_impedance_active_ = false;
+  use_fixed_body_x_dir_ = false;
 }
 
 void GimbalrotorController::rosParamInit()
@@ -543,15 +557,44 @@ void GimbalrotorController::ExtWrenchControl(){
 
   Eigen::Vector3d target_acc = target_acc_gain_ * mass_inv * force_error;
 
-  /* impedance (spring-damper along body x, active in body x velocity mode) */
-  // F_imp = K_imp * (x_d - x).bx + D_imp * (0 - v).bx, applied along bx in world frame
+  /* impedance on/off: switch body x control mode along with impedance_flag_ */
+  // done here (control loop thread) instead of the callback, to avoid race with navigator/controller states
+  if(impedance_flag_ != prev_impedance_flag_){
+    if(impedance_flag_){
+      // on: body x velocity mode (same process as BaseNavigator::bodyXControlModeCallback with 1)
+      navigator_->setTargetZeroVel();
+      navigator_->setTargetZeroAcc();
+      navigator_->setBodyXControlMode(aerial_robot_navigation::VEL_CONTROL_MODE);
+      ROS_INFO("[gimbalrotor_controller] impedance: on, (body)x velocity control mode");
+    }
+    else{
+      // off: body x position mode (same process as BaseNavigator::bodyXControlModeCallback with 0)
+      tf::Vector3 pos_cog = estimator_->getPos(Frame::COG, estimate_mode_);
+      navigator_->setTargetPos(pos_cog);
+      navigator_->setXControlMode(aerial_robot_navigation::POS_CONTROL_MODE);
+      navigator_->setYControlMode(aerial_robot_navigation::POS_CONTROL_MODE);
+      navigator_->setTargetZeroVel();
+      navigator_->setTargetZeroAcc();
+      navigator_->setBodyXControlMode(aerial_robot_navigation::POS_CONTROL_MODE);
+      ROS_INFO("[gimbalrotor_controller] impedance: off, (body)x position control mode");
+    }
+    prev_impedance_flag_ = impedance_flag_;
+  }
+
+  /* impedance (spring-damper along fixed direction n, active when impedance_flag_ is on in body x velocity mode) */
+  // F_imp = K_imp * (x_d - x).n + D_imp * (0 - v).n, applied along n in world frame
+  // - n is fixed during impedance mode (not the current body x axis), to avoid the coupling between
+  //   attitude fluctuation and position control (the same n is used for projection in PoseLinearController)
+  // - n is given by impedance_direction topic (e.g. surface normal), otherwise the body x axis at the switch
   // - desire_pos_for_impedance_ is the target CoG position in world frame
   // - pos/vel/orientation are taken from the estimator here, because pos_, vel_ and body_orientation_
   //   are updated in PoseLinearController::controlCore(), which is called after this function
   // - the result is sent as feedforward acc via navigator, so it takes effect in the next control cycle
-  uint8_t body_x_control_mode = navigator_->getBodyXControlMode();
+  // body x velocity mode without impedance_flag_ is a plain velocity mode (no impedance force)
+  bool impedance_active = impedance_flag_ &&
+    navigator_->getBodyXControlMode() == aerial_robot_navigation::VEL_CONTROL_MODE;
   Eigen::Vector3d F_imp_w = Eigen::Vector3d::Zero();
-  if(body_x_control_mode == aerial_robot_navigation::VEL_CONTROL_MODE){
+  if(impedance_active){
     tf::Vector3 pos_tf = estimator_->getPos(Frame::COG, estimate_mode_);
     tf::Vector3 vel_tf = estimator_->getVel(Frame::COG, estimate_mode_);
     Eigen::Vector3d pos_cur(pos_tf.x(), pos_tf.y(), pos_tf.z());
@@ -559,32 +602,47 @@ void GimbalrotorController::ExtWrenchControl(){
 
     // initialize target position with current position when switched into impedance mode
     // (unless a target was given in advance), to avoid a force step at the switch
-    if(prev_body_x_control_mode_ != aerial_robot_navigation::VEL_CONTROL_MODE && !desire_pos_for_impedance_received_){
+    if(!prev_impedance_active_ && !desire_pos_for_impedance_received_){
       desire_pos_for_impedance_ = pos_cur;
       ROS_INFO("[gimbalrotor_controller] impedance: target pos is initialized by current pos [%.3f, %.3f, %.3f]",
                pos_cur(0), pos_cur(1), pos_cur(2));
     }
 
-    // body x axis in world frame (same definition as w_base_bx_ in PoseLinearController, but current value)
-    Eigen::Matrix3d baselink_rot;
-    tf::matrixTFToEigen(estimator_->getOrientation(Frame::BASELINK, estimate_mode_), baselink_rot);
-    Eigen::Vector3d bx = baselink_rot.col(0);
+    // latch the impedance direction when switched into impedance mode
+    if(!prev_impedance_active_ && !impedance_dir_received_){
+      // body x axis in world frame at the switch
+      Eigen::Matrix3d baselink_rot;
+      tf::matrixTFToEigen(estimator_->getOrientation(Frame::BASELINK, estimate_mode_), baselink_rot);
+      impedance_dir_ = baselink_rot.col(0);
+      ROS_INFO("[gimbalrotor_controller] impedance: direction is fixed to current body x [%.3f, %.3f, %.3f]",
+               impedance_dir_(0), impedance_dir_(1), impedance_dir_(2));
+    }
+    const Eigen::Vector3d& bx = impedance_dir_;
 
-    // project world frame errors onto body x (previously (R * pos).x() was used, which is not the body frame value)
+    // use the same fixed direction for projection of position error in PoseLinearController::controlCore()
+    use_fixed_body_x_dir_ = true;
+    fixed_body_x_dir_.setValue(bx(0), bx(1), bx(2));
+
+    // project world frame errors onto n (previously (R * pos).x() was used, which is not the body frame value)
     double err_pos_bx = (desire_pos_for_impedance_ - pos_cur).dot(bx);
     double err_vel_bx = -vel_cur.dot(bx);
     double F_imp_bx = K_imp_ * err_pos_bx + D_imp_ * err_vel_bx;
     F_imp_bx = clamp(F_imp_bx, -limit_F_imp_, limit_F_imp_);
 
-    // apply as a world frame vector along bx (previously added to force_error(0), i.e., world x)
+    // apply as a world frame vector along n (previously added to force_error(0), i.e., world x)
     F_imp_w = F_imp_bx * bx;
     target_acc += target_acc_gain_ * mass_inv * F_imp_w;
   }
   else{
     // target received outside impedance mode is kept for the next switch; reset it once used
-    if(prev_body_x_control_mode_ == aerial_robot_navigation::VEL_CONTROL_MODE) desire_pos_for_impedance_received_ = false;
+    if(prev_impedance_active_){
+      desire_pos_for_impedance_received_ = false;
+      impedance_dir_received_ = false;
+    }
+    // return to the current body x axis for projection in PoseLinearController
+    use_fixed_body_x_dir_ = false;
   }
-  prev_body_x_control_mode_ = body_x_control_mode;
+  prev_impedance_active_ = impedance_active;
   Eigen::Vector3d target_ang_acc = target_acc_gain_ * inertia_inv * torque_error;
   Eigen::Vector3d feedforward_acc = cog_rot * (target_acc + feedforward_sum_.head(3));
   Eigen::Vector3d feedforward_ang_acc = cog_rot * (target_ang_acc + feedforward_sum_.tail(3));
@@ -769,6 +827,30 @@ void GimbalrotorController::DesirePosImpedanceCallback(geometry_msgs::Vector3 ms
   // impedance: target CoG position in world frame
   desire_pos_for_impedance_ << msg.x, msg.y, msg.z;
   desire_pos_for_impedance_received_ = true;
+}
+
+void GimbalrotorController::ImpedanceFlagCallback(std_msgs::Bool msg)
+{
+  // impedance: only store the request here; body x control mode is switched in ExtWrenchControl()
+  if(msg.data && navigator_->getNaviState() <= aerial_robot_navigation::START_STATE)
+    {
+      ROS_WARN("[gimbalrotor_controller] impedance: ignore on request before takeoff");
+      return;
+    }
+  impedance_flag_ = msg.data;
+}
+
+void GimbalrotorController::ImpedanceDirectionCallback(geometry_msgs::Vector3 msg)
+{
+  // impedance: direction of impedance in world frame (e.g. surface normal), normalized here
+  Eigen::Vector3d dir(msg.x, msg.y, msg.z);
+  if(dir.norm() < 1e-6)
+    {
+      ROS_WARN("[gimbalrotor_controller] impedance: ignore zero direction");
+      return;
+    }
+  impedance_dir_ = dir.normalized();
+  impedance_dir_received_ = true;
 }
 
 }  // namespace aerial_robot_control

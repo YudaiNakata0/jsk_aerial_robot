@@ -44,6 +44,8 @@ private:
   ros::Subscriber body_x_vel_mode_sub_;
   ros::Subscriber desire_pos_for_impedance_sub_;
   ros::Publisher impedance_force_pub_;               // for impedance (debug)
+  ros::Subscriber impedance_direction_sub_;          // for impedance
+  ros::Subscriber impedance_flag_sub_;               // for impedance (on/off)
   ros::Time time_hover_;
 
   boost::shared_ptr<GimbalrotorRobotModel> gimbalrotor_robot_model_;
@@ -100,8 +102,16 @@ private:
   double D_imp_;
   // impedance: true if desire_pos_for_impedance was received while not in impedance mode
   bool desire_pos_for_impedance_received_;
-  // impedance: previous body x control mode, to detect the switch into impedance mode
-  uint8_t prev_body_x_control_mode_;
+  // impedance: on/off request by impedance_flag topic (body x control mode is switched along with it)
+  bool impedance_flag_;
+  // impedance: previous impedance_flag_, to detect the on/off request in the control loop
+  bool prev_impedance_flag_;
+  // impedance: previous state of impedance activation, to detect the switch into impedance mode
+  bool prev_impedance_active_;
+  // impedance: fixed direction of impedance (world frame, unit vector), instead of the current body x axis
+  Eigen::Vector3d impedance_dir_;
+  // impedance: true if impedance_direction was received while not in impedance mode
+  bool impedance_dir_received_;
 
   void rosParamInit();
   bool update() override;
@@ -120,5 +130,7 @@ private:
   void XYZWrenchControlFlagCallBack(std_msgs::Bool msg);
   void BodyXVelModeCallBack(std_msgs::Bool msg);
   void DesirePosImpedanceCallback(geometry_msgs::Vector3 msg);
+  void ImpedanceDirectionCallback(geometry_msgs::Vector3 msg);
+  void ImpedanceFlagCallback(std_msgs::Bool msg);
 };
 };  // namespace aerial_robot_control

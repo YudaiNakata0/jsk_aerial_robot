@@ -109,6 +109,10 @@ namespace aerial_robot_control
     tf::Vector3 omega_, target_omega_;
     tf::Matrix3x3 body_orientation_;
     Eigen::Vector3d w_base_bx_, w_base_by_, w_base_bz_;
+    // if true, fixed_body_x_dir_ (world frame, unit vector) is used as body x axis instead of the current
+    // orientation, for projection in body x control mode (set by derived class, e.g. for impedance control)
+    bool use_fixed_body_x_dir_;
+    tf::Vector3 fixed_body_x_dir_;
 
     std::mutex wrench_mutex_;
     boost::thread wrench_estimate_thread_;
