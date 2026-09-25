@@ -156,7 +156,7 @@
     <joint name="aerial_robot_camera_joint" type="fixed">
       <parent link="base_link"/>
       <child link="aerial_robot_camera_frame"/>
-      <origin xyz="0.259 0 0.159" rpy="0 ${-pi/6} 0"/>
+      <origin xyz="0.259 0 0.159" rpy="0 ${-pi/9} 0"/>
     </joint>
 
     ## camera optical frame

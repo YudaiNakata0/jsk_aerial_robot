@@ -1,0 +1,22 @@
+initial_scale_y: 0.00011873719493329615
+initial_scale_z: 0.00011685745840038729
+calibration:
+  date: '2026-09-25T19:47:16'
+  origin_y: 0.0005168902494142597
+  origin_z: 0.9083694069137013
+  y:
+    scale: 0.00011873719493329615
+    slope_px_per_m: 8421.960789639483
+    r2: 0.99962224464019
+    cross_coupling: 0.0028286881050888406
+    max_residual_px: 8.409075774427919
+    num_points: 9
+    pos_range_m: 0.08555802065806384
+  z:
+    scale: 0.00011685745840038729
+    slope_px_per_m: 8557.434105521208
+    r2: 0.9911500281935847
+    cross_coupling: -0.024614759047105316
+    max_residual_px: 14.17053100918838
+    num_points: 5
+    pos_range_m: 0.02862628266666878

@@ -291,7 +291,7 @@ if __name__ == "__main__":
     patch_width = rospy.get_param("~patch_width", 480)
     patch_height = rospy.get_param("~patch_height", 300)
     patch_top_margin = rospy.get_param("~patch_top_margin", 40)
-    match_thresh = rospy.get_param("~match_thresh", 0.6)
+    match_thresh = rospy.get_param("~match_thresh", 0.7)
     search_margin = rospy.get_param("~search_margin", 60)
     use_coarse_reacquire = rospy.get_param("~use_coarse_reacquire", True)
     coarse_scale = rospy.get_param("~coarse_scale", 0.5)
