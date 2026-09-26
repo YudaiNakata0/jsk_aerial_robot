@@ -22,7 +22,19 @@ class HoleDeviationCompensator():
                   recovery_lookback秒の位置を復帰目標とし、その位置へ速度指令で戻る
       3. GIVE_UP: recovery_timeout秒経っても再検出できなければ、その場で速度0を保持
     再検出されたら積分項等をリセットして通常のトラッキングに戻る。
+
+    y方向の指令方式は~nav_modeで切り替える(例: rosrun ... _nav_mode:=pos_vel)。
+      vel     : VEL_MODE。位置フィードバックが無く、外乱で流されても戻らない。
+      pos_vel : POS_VEL_MODE。navigator側で速度指令を目標位置に積分するため、
+                位置制御が効いたまま指令速度で目標が動く。検出の開始/ロスト時には
+                目標位置を現在位置に合わせ直す(POS_MODEを1回送る)。
+    z方向は、navigatorのsimpleNaviCallbackがzのPOS_VEL_MODEを扱わない一方、
+    zのVEL_MODEは制御モードを変えずに目標速度だけを与える(=pos-vel相当)ため、
+    どちらの方式でもVEL_MODEで送る。
     """
+
+    NAV_MODE_VEL = "vel"
+    NAV_MODE_POS_VEL = "pos_vel"
 
     STATE_TRACKING = "tracking"
     STATE_HOLD = "hold"
@@ -59,6 +71,14 @@ class HoleDeviationCompensator():
         # validトピックがこの時間途絶えたらトラッカ停止とみなしロスト扱いにする
         self.valid_timeout = rospy.get_param("~valid_timeout", 0.5)            # [s]
         self.control_rate = rospy.get_param("~control_rate", 20.0)             # [Hz]
+
+        self.nav_mode = rospy.get_param("~nav_mode", self.NAV_MODE_VEL)
+        if self.nav_mode not in (self.NAV_MODE_VEL, self.NAV_MODE_POS_VEL):
+            rospy.logwarn("Unknown nav_mode '%s'. Use '%s'." % (self.nav_mode, self.NAV_MODE_VEL))
+            self.nav_mode = self.NAV_MODE_VEL
+        rospy.loginfo("nav_mode: %s" % self.nav_mode)
+        # pos_velモードで、次の指令の前に目標位置を現在位置へ合わせる必要があるか
+        self.need_target_sync = True
 
         self.state = self.STATE_TRACKING
         self.tracking_valid = False
@@ -134,6 +154,7 @@ class HoleDeviationCompensator():
             rospy.loginfo("Hole tracking recovered (from %s)." % self.state)
         self.state = self.STATE_TRACKING
         self.recovery_goal = None
+        self.need_target_sync = True
         # ロスト中の経過時間で微分・積分が跳ねないようにリセットする
         self.reset_pid()
 
@@ -146,6 +167,8 @@ class HoleDeviationCompensator():
         self.lost_time = rospy.get_time()
         self.recovery_goal = self.select_recovery_goal(self.lost_time)
         self.state = self.STATE_HOLD
+        # pos_velでは目標位置が実位置より先行しているため、その場で止まるよう合わせ直す
+        self.need_target_sync = True
         self.reset_pid()
         self.publish_nav(0.0, 0.0)
 
@@ -251,7 +274,19 @@ class HoleDeviationCompensator():
 
     def publish_nav(self, v_y, v_z):
         msg = SimpleFlightNav()
-        msg.y_control_mode = SimpleFlightNav.VEL_MODE
+        if self.nav_mode == self.NAV_MODE_POS_VEL:
+            if self.need_target_sync and self.cog_pos is not None:
+                # navigator側のsubscriberはqueue_size=1のため、同じ周期で速度指令を
+                # 続けて送ると取りこぼしうる。この周期は目標位置の合わせ直しだけを送る
+                msg.y_control_mode = SimpleFlightNav.POS_MODE
+                msg.z_control_mode = SimpleFlightNav.NO_NAVIGATION
+                msg.pos_y = self.cog_pos[0]
+                self.pub_simple_nav.publish(msg)
+                self.need_target_sync = False
+                return
+            msg.y_control_mode = SimpleFlightNav.POS_VEL_MODE
+        else:
+            msg.y_control_mode = SimpleFlightNav.VEL_MODE
         msg.z_control_mode = SimpleFlightNav.VEL_MODE
         msg.vel_y = v_y
         msg.vel_z = v_z

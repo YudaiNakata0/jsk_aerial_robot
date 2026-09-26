@@ -19,6 +19,8 @@ class HoleTargetTracker():
     4. トラッキング中に基準位置設定キー ('c') を押してからライブ映像上を
        クリックすると、そのクリック位置が偏差(/target/hole_deviation)算出の
        基準位置として更新される。穴指定時と異なり画面を止める必要はない。
+       この基準位置はリセットキー ('r') を押しても保持され、穴の再指定の
+       影響を受けない。
     """
 
     STATE_CAPTURE = "capture"
@@ -48,13 +50,14 @@ class HoleTargetTracker():
         self.reset_state()
         self.setup_ros()
 
-    def reset_state(self):
+    def reset_state(self, preserve_reference=False):
         self.state = self.STATE_CAPTURE
         self.captured_frame = None
         self.click_point = None
         self.template_gray = None
         self.hole_offset = None
-        self.reference_point = None
+        if not preserve_reference:
+            self.reference_point = None
         self.last_top_left = None
         self.lost_count = 0
         self.awaiting_reference_click = False
@@ -138,7 +141,10 @@ class HoleTargetTracker():
         # 穴の位置をテンプレート左上からの相対オフセットとして保持し、
         # 追跡結果（テンプレートの位置）から穴の位置を逆算できるようにする。
         self.hole_offset = (cx - px0, cy - py0)
-        self.reference_point = (cx, cy)
+        # 基準位置は初回のみ穴の位置から設定する。'c'キーによる更新や、
+        # リセット後に保持された値がある場合はここで上書きしない。
+        if self.reference_point is None:
+            self.reference_point = (cx, cy)
         self.last_top_left = (px0, py0)
         self.lost_count = 0
         return True
@@ -215,8 +221,8 @@ class HoleTargetTracker():
 
         key = cv2.waitKey(1) & 0xFF
         if key == self.reset_key:
-            rospy.loginfo("Reset requested. Capture a new sample image.")
-            self.reset_state()
+            rospy.loginfo("Reset requested. Capture a new sample image. Reference position is kept.")
+            self.reset_state(preserve_reference=True)
         elif key == self.set_reference_key:
             self.awaiting_reference_click = True
             rospy.loginfo("Click on the live image to set the new reference position.")
@@ -289,7 +295,7 @@ if __name__ == "__main__":
     default_topic = "/usb_cam/image_raw/compressed" if compressed else "/usb_cam/image_raw"
     topic = rospy.get_param("~topic", default_topic)
     patch_width = rospy.get_param("~patch_width", 480)
-    patch_height = rospy.get_param("~patch_height", 300)
+    patch_height = rospy.get_param("~patch_height", 200)
     patch_top_margin = rospy.get_param("~patch_top_margin", 40)
     match_thresh = rospy.get_param("~match_thresh", 0.7)
     search_margin = rospy.get_param("~search_margin", 60)
