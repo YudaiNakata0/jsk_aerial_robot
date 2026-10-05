@@ -87,7 +87,7 @@
     <joint name="base_end_effector_joint" type="fixed">
       <child link="end_effector"/>
       <parent link="base_link"/>
-      <origin rpy="0 0 0" xyz="0.337 0 0.195"/>
+      <origin rpy="0 0 0" xyz="0.331 0 0.204"/>
       <axis xyz="0 0 1"/>
     </joint>
 
