@@ -28,5 +28,6 @@ class TFPublisher():
 
 if __name__ == '__main__':
     rospy.init_node('get_tf_node')
+    rospy.sleep(10.0)
     publisher = TFPublisher()
     rospy.spin()
